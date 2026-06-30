@@ -10,6 +10,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import dayjs from 'dayjs'
 import * as Notifications from 'expo-notifications'
 import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../context/LanguageContext'
 import { clearUnreadNotifications } from '../utils/notifications'
 
 const TYPE_ICONS = {
@@ -23,6 +24,7 @@ const TYPE_ICONS = {
 
 const NotificationHistory = ({ navigation }) => {
   const { colors } = useTheme()
+  const { t } = useLanguage()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -76,7 +78,7 @@ const NotificationHistory = ({ navigation }) => {
           <Text style={{ fontSize: 22, color: colors.textPrimary }}>←</Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-          Notifications
+          {t('notifications')}
         </Text>
         <TouchableOpacity onPress={() => navigation.navigate('NotificationSettings')}>
           <Text style={{ fontSize: 20 }}>⚙️</Text>
@@ -87,7 +89,7 @@ const NotificationHistory = ({ navigation }) => {
         <View style={styles.emptyWrap}>
           <Text style={{ fontSize: 40 }}>🔔</Text>
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            No notifications yet
+            {t('no_notifications_yet')}
           </Text>
         </View>
       ) : (
@@ -108,7 +110,7 @@ const NotificationHistory = ({ navigation }) => {
                 <Text style={{ fontSize: 24 }}>{icon}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.notifTitle, { color: colors.textPrimary }]}>
-                    {content?.title || 'Notification'}
+                    {content?.title || t('notification_default')}
                   </Text>
                   <Text style={[styles.notifBody, { color: colors.textSecondary }]} numberOfLines={2}>
                     {content?.body || ''}

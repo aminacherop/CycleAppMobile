@@ -12,9 +12,11 @@ import DateTimePicker from '@react-native-community/datetimepicker'
 import Slider from '@react-native-community/slider'
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../context/LanguageContext'
 
 const Onboarding = ({ onComplete }) => {
   const { colors } = useTheme()
+  const { t } = useLanguage()
   const [step, setStep] = useState(1)
 
   const [data, setData] = useState({
@@ -140,7 +142,7 @@ const Onboarding = ({ onComplete }) => {
             style={[styles.btnPrimary, { backgroundColor: colors.pink }]}
             onPress={handleNext}
           >
-            <Text style={styles.btnPrimaryText}>Get started →</Text>
+            <Text style={styles.btnPrimaryText}>{t('get_started')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleComplete}>
@@ -163,14 +165,14 @@ const Onboarding = ({ onComplete }) => {
           </Text>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.textPrimary }]}>Your name *</Text>
+            <Text style={[styles.label, { color: colors.textPrimary }]}>{t('your_name')} *</Text>
             <TextInput
               style={[styles.input, {
                 borderColor: errors.name ? colors.danger : colors.border,
                 color: colors.textPrimary,
                 backgroundColor: colors.white,
               }]}
-              placeholder="e.g. Amina"
+              placeholder={t('name_placeholder')}
               placeholderTextColor={colors.textSecondary}
               value={data.name}
               onChangeText={text => {
@@ -223,7 +225,7 @@ const Onboarding = ({ onComplete }) => {
               style={[styles.btnPrimary, styles.btnFlex, { backgroundColor: colors.pink }]}
               onPress={handleNext}
             >
-              <Text style={styles.btnPrimaryText}>Continue →</Text>
+              <Text style={styles.btnPrimaryText}>{t('continue')} →</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -284,7 +286,7 @@ const Onboarding = ({ onComplete }) => {
 
           <View style={styles.formGroup}>
             <View style={styles.sliderLabelRow}>
-              <Text style={[styles.label, { color: colors.textPrimary }]}>Cycle length</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>{t('cycle_length')}</Text>
               <Text style={[styles.sliderValue, { color: colors.pink }]}>
                 {data.cycleLength} days
               </Text>
@@ -303,7 +305,7 @@ const Onboarding = ({ onComplete }) => {
 
           <View style={styles.formGroup}>
             <View style={styles.sliderLabelRow}>
-              <Text style={[styles.label, { color: colors.textPrimary }]}>Period length</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>{t('period_length')}</Text>
               <Text style={[styles.sliderValue, { color: colors.pink }]}>
                 {data.periodLength} days
               </Text>
@@ -328,12 +330,12 @@ const Onboarding = ({ onComplete }) => {
               <View style={styles.previewGrid}>
                 <View style={[styles.previewItem, { backgroundColor: colors.background }]}>
                   <Text style={styles.previewEmoji}>✨</Text>
-                  <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>Ovulation</Text>
+                  <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>{t('ovulation')}</Text>
                   <Text style={[styles.previewValue, { color: colors.textPrimary }]}>{ovulationDate}</Text>
                 </View>
                 <View style={[styles.previewItem, { backgroundColor: colors.pinkLight }]}>
                   <Text style={styles.previewEmoji}>⏭️</Text>
-                  <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>Next period</Text>
+                  <Text style={[styles.previewLabel, { color: colors.textSecondary }]}>{t('next_period')}</Text>
                   <Text style={[styles.previewValue, { color: colors.pink }]}>{nextPeriod}</Text>
                 </View>
               </View>
@@ -351,7 +353,7 @@ const Onboarding = ({ onComplete }) => {
               style={[styles.btnPrimary, styles.btnFlex, { backgroundColor: colors.pink }]}
               onPress={handleNext}
             >
-              <Text style={styles.btnPrimaryText}>Continue →</Text>
+              <Text style={styles.btnPrimaryText}>{t('continue')} →</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -392,7 +394,7 @@ const Onboarding = ({ onComplete }) => {
             style={[styles.btnPrimary, styles.btnLarge, { backgroundColor: colors.pink }]}
             onPress={handleComplete}
           >
-            <Text style={styles.btnPrimaryText}>Go to my dashboard 🏠</Text>
+            <Text style={styles.btnPrimaryText}>{t('go_to_dashboard')}</Text>
           </TouchableOpacity>
         </View>
       )}

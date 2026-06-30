@@ -11,6 +11,7 @@ import {
 import * as Clipboard from 'expo-clipboard'
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../context/LanguageContext'
 import { usePremium } from '../context/PremiumContext'
 import Paywall from './Paywall'
 import {
@@ -25,6 +26,7 @@ import {
 
 const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
   const { colors } = useTheme()
+  const { t } = useLanguage()
   const { isPremium } = usePremium()
   const [mode, setMode] = useState('menu')
   const [showPaywall, setShowPaywall] = useState(false)
@@ -79,7 +81,7 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
 
   const handleValidate = async () => {
     if (!enteredCode.trim()) {
-      setError('Please enter the pairing code')
+      setError(t('enter_pairing_code_error'))
       return
     }
     setValidating(true)
@@ -92,8 +94,8 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
     } else {
       setError(
         result.reason === 'Code has expired'
-          ? '⏰ This code has expired. Ask your partner for a new one.'
-          : '❌ Invalid code. Please check and try again.'
+          ? t('code_expired_error')
+          : t('invalid_code_error')
       )
     }
     setValidating(false)
@@ -123,16 +125,16 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
         </TouchableOpacity>
         <Text style={{ fontSize: 56, marginBottom: 16 }}>👫</Text>
         <Text style={{ fontSize: 20, fontWeight: '800', color: colors.textPrimary, marginBottom: 8, textAlign: 'center' }}>
-          Partner Sharing
+          {t('partner_sharing')}
         </Text>
         <Text style={{ fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 24, paddingHorizontal: 24 }}>
-          Share your cycle summary with your partner — phase, days to next period, and helpful tips. Unlock with Premium.
+          {t('partner_unlock_desc')}
         </Text>
         <TouchableOpacity
           style={{ backgroundColor: colors.pink, paddingVertical: 14, paddingHorizontal: 32, borderRadius: 24 }}
           onPress={() => setShowPaywall(true)}
         >
-          <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>👑 Unlock Premium</Text>
+          <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>{t('unlock_premium')}</Text>
         </TouchableOpacity>
         <Paywall
           visible={showPaywall}
@@ -149,9 +151,9 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
       contentContainerStyle={styles.scrollContent}
     >
       <TouchableOpacity activeOpacity={0.6} style={styles.backBtn} onPress={() => navigation.goBack()}>
-        <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>← Back</Text>
+        <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>← {t('back')}</Text>
       </TouchableOpacity>
-      <Text style={[styles.title, { color: colors.textPrimary }]}>Partner Sharing</Text>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{t('partner_sharing')}</Text>
 
       {/* ── MENU ── */}
       {mode === 'menu' && (
@@ -159,22 +161,21 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
           <View style={styles.heroWrap}>
             <Text style={styles.heroIcon}>👫</Text>
             <Text style={[styles.heroTitle, { color: colors.textPrimary }]}>
-              Share your cycle with your partner
+              {t('share_cycle_with_partner')}
             </Text>
             <Text style={[styles.heroDesc, { color: colors.textSecondary }]}>
-              They will only see your current phase and mood — never
-              your detailed logs or personal data.
+              {t('partner_privacy_desc')}
             </Text>
           </View>
 
           <View style={[styles.privacyCard, { backgroundColor: colors.white, borderColor: colors.border }]}>
-            <Text style={[styles.privacyTitle, { color: colors.textPrimary }]}>🔒 What your partner sees</Text>
+            <Text style={[styles.privacyTitle, { color: colors.textPrimary }]}>{t('what_partner_sees')}</Text>
             {[
-              { yes: true, text: 'Current cycle phase' },
-              { yes: true, text: 'General mood summary' },
-              { yes: true, text: 'Days until next period' },
-              { yes: false, text: 'Detailed symptoms or logs' },
-              { yes: false, text: 'Test results or notes' },
+              { yes: true, text: t('current_cycle_phase') },
+              { yes: true, text: t('general_mood_summary') },
+              { yes: true, text: t('days_until_next_period') },
+              { yes: false, text: t('detailed_symptoms_logs') },
+              { yes: false, text: t('test_results_notes') },
             ].map((row, i) => (
               <View key={i} style={styles.privacyRow}>
                 <Text style={{ fontSize: 16 }}>{row.yes ? '✅' : '❌'}</Text>
@@ -188,7 +189,7 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
               style={[styles.btnPrimary, { backgroundColor: colors.pink }]}
               onPress={() => setMode('view')}
             >
-              <Text style={styles.btnPrimaryText}>👫 View partner's cycle</Text>
+              <Text style={styles.btnPrimaryText}>{t('view_partners_cycle')}</Text>
             </TouchableOpacity>
           ) : null}
 
@@ -198,7 +199,7 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
             disabled={generating}
           >
             <Text style={styles.btnPrimaryText}>
-              {generating ? 'Generating...' : pairingData ? '🔑 View my pairing code' : '🔑 Generate pairing code'}
+              {generating ? t('generating_dots') : pairingData ? t('view_pairing_code') : t('generate_pairing_code')}
             </Text>
           </TouchableOpacity>
 
@@ -207,7 +208,7 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
             onPress={() => setMode('enter')}
           >
             <Text style={[styles.btnSecondaryText, { color: colors.textSecondary }]}>
-              I have a partner code →
+              {t('i_have_partner_code')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -217,29 +218,29 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
       {mode === 'generate' && pairingData && (
         <View>
           <TouchableOpacity onPress={() => setMode('menu')} style={{ marginBottom: 12 }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>← Back to menu</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('back_to_menu')}</Text>
           </TouchableOpacity>
 
           <View style={[styles.codeCard, { backgroundColor: colors.pinkLight, borderColor: colors.pinkMid }]}>
-            <Text style={[styles.codeLabel, { color: colors.pinkDark }]}>Your pairing code</Text>
+            <Text style={[styles.codeLabel, { color: colors.pinkDark }]}>{t('your_pairing_code')}</Text>
             <View style={[styles.codeDisplay, { backgroundColor: colors.white }]}>
               <Text style={[styles.codeText, { color: colors.pink }]}>{pairingData.code}</Text>
             </View>
             <Text style={[styles.codeExpiry, { color: colors.pinkDark }]}>
-              ⏰ Expires in {getDaysRemaining(pairingData.expiresAt)} days ·{' '}
+              {t('expires_in_days')} {getDaysRemaining(pairingData.expiresAt)} {t('days_label')} ·{' '}
               {dayjs(pairingData.expiresAt).format('MMM D, YYYY')}
             </Text>
           </View>
 
           <View style={[styles.instructionsCard, { backgroundColor: colors.white, borderColor: colors.border }]}>
             <Text style={[styles.instructionsTitle, { color: colors.textPrimary }]}>
-              📱 Share this with your partner:
+              {t('share_with_partner_title')}
             </Text>
             {[
-              'Share the code with your partner',
-              'Partner downloads CycleApp',
-              'Taps "I have a partner code" and enters it',
-              'Pairing complete!',
+              t('step_share_code'),
+              t('step_download'),
+              t('step_enter_code'),
+              t('step_complete'),
             ].map((step, i) => (
               <View key={i} style={styles.stepRow}>
                 <View style={[styles.stepNum, { backgroundColor: colors.pinkLight }]}>
@@ -255,14 +256,14 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
               style={[styles.shareBtn, { backgroundColor: '#E8F5E9' }]}
               onPress={handleShare}
             >
-              <Text style={{ color: '#1B5E20', fontWeight: '600', fontSize: 13 }}>📤 Share</Text>
+              <Text style={{ color: '#1B5E20', fontWeight: '600', fontSize: 13 }}>{t('share_btn')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.shareBtn, { backgroundColor: copied ? '#D1FAE5' : colors.pinkLight }]}
               onPress={handleCopy}
             >
               <Text style={{ color: copied ? '#065F46' : colors.pinkDark, fontWeight: '600', fontSize: 13 }}>
-                {copied ? '✅ Copied!' : '📋 Copy code'}
+                {copied ? t('copied_btn') : t('copy_code_btn')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -272,7 +273,7 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
             onPress={handleGenerate}
           >
             <Text style={[styles.btnSecondaryText, { color: colors.textSecondary }]}>
-              🔄 Generate new code
+              {t('generate_new_code')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -286,14 +287,14 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
           </TouchableOpacity>
 
           <Text style={[styles.heroTitle, { color: colors.textPrimary, textAlign: 'left', marginBottom: 6 }]}>
-            Enter partner code
+            {t('enter_partner_code_title')}
           </Text>
           <Text style={[styles.heroDesc, { color: colors.textSecondary, textAlign: 'left', marginBottom: 20 }]}>
-            Ask your partner for their 6-digit CycleApp pairing code.
+            {t('enter_partner_code_desc')}
           </Text>
 
           <View style={[styles.enterCard, { backgroundColor: colors.white, borderColor: colors.border }]}>
-            <Text style={[styles.label, { color: colors.textPrimary }]}>Pairing code</Text>
+            <Text style={[styles.label, { color: colors.textPrimary }]}>{t('pairing_code_label')}</Text>
             <TextInput
               style={[
                 styles.codeInput,
@@ -319,7 +320,7 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
             disabled={validating || !enteredCode.trim()}
           >
             <Text style={styles.btnPrimaryText}>
-              {validating ? 'Checking...' : 'Pair with partner ✓'}
+              {validating ? t('checking_dots') : t('pair_with_partner')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -363,34 +364,34 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
               {userName}'s Cycle
             </Text>
             <Text style={[styles.heroDesc, { color: colors.textSecondary, textAlign: 'left', marginBottom: 16 }]}>
-              Safe summary only
+              {t('safe_summary_only')}
             </Text>
 
             <View style={[styles.phaseCard, { backgroundColor: phaseColors[phase] + '15', borderColor: phaseColors[phase] + '40' }]}>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Current phase</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t('current_phase')}</Text>
               <Text style={{ color: phaseColors[phase], fontSize: 20, fontWeight: '700', marginVertical: 4 }}>
-                {phase} phase
+                {t(`phase_${phase.toLowerCase()}`)} {t('phase_suffix')}
               </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Day {cycleDay} of {cLen}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t('day_of')} {cycleDay} {t('of')} {cLen}</Text>
             </View>
 
             <View style={styles.statsRow}>
               <View style={[styles.statBox, { backgroundColor: colors.white, borderColor: colors.border }]}>
                 <Text style={{ color: colors.pink, fontSize: 20, fontWeight: '700' }}>{daysUntilPeriod}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 10 }}>days to period</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 10 }}>{t('days_to_period')}</Text>
               </View>
               <View style={[styles.statBox, { backgroundColor: colors.white, borderColor: colors.border }]}>
                 <Text style={{ color: '#F59E0B', fontSize: 20, fontWeight: '700' }}>{ovulation.format('MMM D')}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 10 }}>ovulation date</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 10 }}>{t('ovulation_date')}</Text>
               </View>
             </View>
 
             <View style={[styles.tipCard, { backgroundColor: colors.white, borderColor: colors.border }]}>
               <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 13, marginBottom: 6 }}>
-                💡 How to support {userName}
+                {t('how_to_support')} {userName}
               </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>
-                {phaseTips[phase]}
+                {t(`tip_${phase.toLowerCase()}`)}
               </Text>
             </View>
 
@@ -399,7 +400,7 @@ const PartnerInvite = ({ navigation, cycleSettings, userProfile }) => {
               onPress={handleUnpair}
             >
               <Text style={{ color: '#EF4444', fontWeight: '600', fontSize: 14 }}>
-                Disconnect from {userName}
+                {t('disconnect_from')} {userName}
               </Text>
             </TouchableOpacity>
           </View>

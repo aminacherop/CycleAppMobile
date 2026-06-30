@@ -1,10 +1,12 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../context/LanguageContext'
 import { saveData } from '../utils/storage'
 import dayjs from 'dayjs'
 
 const PregnancyIntro = ({ navigation }) => {
   const { colors } = useTheme()
+  const { t } = useLanguage()
 
   const handleContinue = async () => {
     await saveData('pregnancy_mode', true)
@@ -22,10 +24,10 @@ const PregnancyIntro = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={{ fontSize: 22, color: 'white' }}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Pregnancy mode</Text>
+        <Text style={styles.headerTitle}>{t('pregnancy_mode_title')}</Text>
 
         <Text style={styles.congratsText}>
-          Congratulations{'\n'}Mom-to-be!
+          {t('congratulations_mom')}{'\n'}{t('mom_to_be')}
         </Text>
 
         <View style={styles.babyWrap}>
@@ -39,19 +41,19 @@ const PregnancyIntro = ({ navigation }) => {
 
       {/* Content */}
       <View style={styles.content}>
-        <Text style={[styles.hereTitle, { color: colors.textPrimary }]}>Here you can:</Text>
+        <Text style={[styles.hereTitle, { color: colors.textPrimary }]}>{t('here_you_can')}</Text>
 
         <View style={styles.featureRow}>
           <Text style={{ fontSize: 28 }}>⏳</Text>
           <Text style={[styles.featureText, { color: colors.textPrimary }]}>
-            Count down the days until the birth of your baby
+            {t('countdown_baby_birth')}
           </Text>
         </View>
 
         <View style={styles.featureRow}>
           <Text style={{ fontSize: 28 }}>❤️</Text>
           <Text style={[styles.featureText, { color: colors.textPrimary }]}>
-            Track your weight & health data and share with your doctor
+            {t('track_weight_health')}
           </Text>
         </View>
       </View>
@@ -61,10 +63,10 @@ const PregnancyIntro = ({ navigation }) => {
           style={[styles.continueBtn, { backgroundColor: colors.pink }]}
           onPress={handleContinue}
         >
-          <Text style={styles.continueBtnText}>Continue</Text>
+          <Text style={styles.continueBtnText}>{t('continue_btn')}</Text>
         </TouchableOpacity>
         <Text style={[styles.noteText, { color: colors.textSecondary }]}>
-          *Click continue to turn on your pregnancy mode.
+            {t('click_continue_pregnancy')}
         </Text>
       </View>
 

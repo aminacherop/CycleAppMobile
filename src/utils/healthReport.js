@@ -1,7 +1,7 @@
 import * as Print from 'expo-print'
 import * as Sharing from 'expo-sharing'
 import dayjs from 'dayjs'
-import { SYMPTOM_CATEGORIES } from './symptomCategories'
+import { SYMPTOM_CATEGORIES, getSymptomLabel as getLabel } from './symptomCategories'
 
 const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate }) => {
   const cycleLength = cycleSettings?.cycleLength || 28
@@ -41,7 +41,7 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
   const allDetailedSymptoms = SYMPTOM_CATEGORIES.flatMap(c => c.items)
   const getSymptomLabel = (id) => {
     const item = allDetailedSymptoms.find(s => s.id === id)
-    return item ? item.label : id
+    return item ? getLabel(item, 'en') : id
   }
   const symptomCount = {}
   Object.values(dailyLogs || {}).forEach(log => {

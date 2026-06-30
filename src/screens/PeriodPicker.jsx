@@ -8,9 +8,11 @@ import {
 } from 'react-native'
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../context/LanguageContext'
 
 const PeriodPicker = ({ cycleSettings, setCycleSettings, navigation }) => {
   const { colors } = useTheme()
+  const { t } = useLanguage()
   const [currentMonth, setCurrentMonth] = useState(dayjs())
 
   const lastPeriodStart = cycleSettings?.lastPeriodStart || dayjs().format('YYYY-MM-DD')
@@ -29,7 +31,10 @@ const PeriodPicker = ({ cycleSettings, setCycleSettings, navigation }) => {
   const today = dayjs()
   const startDayOfWeek = currentMonth.startOf('month').day()
   const daysInMonth = currentMonth.daysInMonth()
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const weekDays = [
+    t('weekday_short_sun'), t('weekday_short_mon'), t('weekday_short_tue'),
+    t('weekday_short_wed'), t('weekday_short_thu'), t('weekday_short_fri'), t('weekday_short_sat'),
+  ]
 
   const toggleDate = (dateStr) => {
     setSelectedDates(prev => {
@@ -81,7 +86,7 @@ const PeriodPicker = ({ cycleSettings, setCycleSettings, navigation }) => {
       {/* Hint banner */}
       <View style={[styles.hintBanner, { backgroundColor: colors.background }]}>
         <Text style={[styles.hintText, { color: colors.textPrimary }]}>
-          🩸 Tap on date to adjust your period
+            {t('tap_to_adjust_period')}
         </Text>
       </View>
 
@@ -118,7 +123,7 @@ const PeriodPicker = ({ cycleSettings, setCycleSettings, navigation }) => {
             return (
               <View key={day} style={styles.dayCellWrap}>
                 {isToday && (
-                  <Text style={[styles.todayLabel, { color: colors.textPrimary }]}>TODAY</Text>
+                  <Text style={[styles.todayLabel, { color: colors.textPrimary }]}>{t('today').toUpperCase()}</Text>
                 )}
                 <Text style={[
                   styles.dayNum,
@@ -158,7 +163,7 @@ const PeriodPicker = ({ cycleSettings, setCycleSettings, navigation }) => {
         style={[styles.saveBtn, { backgroundColor: colors.pink }]}
         onPress={handleSave}
       >
-        <Text style={styles.saveBtnText}>Save</Text>
+        <Text style={styles.saveBtnText}>{t('save')}</Text>
       </TouchableOpacity>
 
     </View>

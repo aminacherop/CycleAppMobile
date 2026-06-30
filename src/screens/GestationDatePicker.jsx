@@ -8,6 +8,7 @@ import {
 } from 'react-native'
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../context/LanguageContext'
 import { saveData } from '../utils/storage'
 
 const ITEM_HEIGHT = 44
@@ -21,6 +22,7 @@ const MONTHS = [
 
 const GestationDatePicker = ({ route, navigation }) => {
   const { colors } = useTheme()
+  const { t } = useLanguage()
   const initialDate = route?.params?.gestationStart
     ? dayjs(route.params.gestationStart)
     : dayjs()
@@ -43,10 +45,10 @@ const GestationDatePicker = ({ route, navigation }) => {
   const today = dayjs()
   const diffDays = today.diff(selectedDate, 'day')
   const relativeLabel = diffDays === 0
-    ? 'Today'
+    ? t('today')
     : diffDays > 0
-      ? `${diffDays} day${diffDays !== 1 ? 's' : ''} ago, ${selectedDate.format('dddd')}`
-      : `In ${Math.abs(diffDays)} day${Math.abs(diffDays) !== 1 ? 's' : ''}, ${selectedDate.format('dddd')}`
+      ? `${diffDays} ${diffDays !== 1 ? t('days_ago_suffix') : t('day_ago_suffix')}, ${selectedDate.format('dddd')}`
+      : `${t('in_days_prefix')} ${Math.abs(diffDays)} ${Math.abs(diffDays) !== 1 ? t('days_word') : t('day_word')}, ${selectedDate.format('dddd')}`
 
   const handleScrollEnd = (e, setter, list) => {
     const y = e.nativeEvent.contentOffset.y
@@ -97,7 +99,7 @@ const GestationDatePicker = ({ route, navigation }) => {
 
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-          Estimated start of gestation
+            {t('estimated_gestation_start')}
         </Text>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={{ fontSize: 20, color: colors.textPrimary }}>✕</Text>
@@ -146,7 +148,7 @@ const GestationDatePicker = ({ route, navigation }) => {
         style={[styles.doneBtn, { backgroundColor: colors.pink }]}
         onPress={handleSave}
       >
-        <Text style={styles.doneBtnText}>Done</Text>
+        <Text style={styles.doneBtnText}>{t('done_btn')}</Text>
       </TouchableOpacity>
 
     </View>

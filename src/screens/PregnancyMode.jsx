@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native'
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../context/LanguageContext'
 import { saveData, loadData } from '../utils/storage'
 
 const PregnancyMode = ({ navigation }) => {
   const { colors } = useTheme()
+  const { t } = useLanguage()
   const [gestationStart, setGestationStart] = useState(dayjs().format('YYYY-MM-DD'))
   const [showTurnOffModal, setShowTurnOffModal] = useState(false)
   const [showHomepageModal, setShowHomepageModal] = useState(false)
@@ -33,8 +35,8 @@ const PregnancyMode = ({ navigation }) => {
   const daysToBaby = Math.max(0, dueDate.diff(today, 'day'))
 
   const homepageLabel = homepageDisplay === 'days_to_baby'
-    ? `${daysToBaby} days to baby`
-    : `${weeks}W${days}D since pregnancy`
+    ? `${daysToBaby} ${t('days_to_baby_suffix')}`
+    : `${weeks}W${days}D ${t('since_pregnancy_suffix')}`
 
   const handleNoLongerPregnant = async () => {
     await saveData('pregnancy_mode', false)
@@ -71,7 +73,7 @@ const PregnancyMode = ({ navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={{ fontSize: 22, color: colors.textPrimary }}>←</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Pregnancy</Text>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('pregnancy_title')}</Text>
         <TouchableOpacity
           style={[styles.checkBtn, { backgroundColor: colors.pink }]}
           onPress={() => navigation.goBack()}
@@ -88,7 +90,7 @@ const PregnancyMode = ({ navigation }) => {
           onPress={() => navigation.navigate('GestationDatePicker', { gestationStart })}
         >
           <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-            Estimated start of gestation
+            {t('estimated_gestation_start')}
           </Text>
           <Text style={{ color: '#5B4FE5', fontSize: 16, fontWeight: '700' }}>
             {start.format('MMM D, YYYY')}
@@ -101,7 +103,7 @@ const PregnancyMode = ({ navigation }) => {
           onPress={() => setShowHomepageModal(true)}
         >
           <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-            Display on the homepage
+            {t('display_on_homepage')}
           </Text>
           <Text style={{ color: '#5B4FE5', fontSize: 16, fontWeight: '700' }}>
             {homepageLabel}
@@ -114,7 +116,7 @@ const PregnancyMode = ({ navigation }) => {
           onPress={() => setShowTurnOffModal(true)}
         >
           <Text style={{ color: colors.pink, fontSize: 16, fontWeight: '700' }}>
-            Turn off pregnancy mode
+            {t('turn_off_pregnancy_mode')}
           </Text>
         </TouchableOpacity>
 
@@ -126,7 +128,7 @@ const PregnancyMode = ({ navigation }) => {
           style={[styles.babyBornBtn, { backgroundColor: colors.pink }]}
           onPress={handleBabyBorn}
         >
-          <Text style={styles.babyBornBtnText}>My baby was born!</Text>
+          <Text style={styles.babyBornBtnText}>{t('my_baby_was_born')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -149,14 +151,14 @@ const PregnancyMode = ({ navigation }) => {
               style={[styles.sheetBtnPrimary, { backgroundColor: colors.pink }]}
               onPress={handleNoLongerPregnant}
             >
-              <Text style={styles.sheetBtnPrimaryText}>I'm no longer pregnant</Text>
+              <Text style={styles.sheetBtnPrimaryText}>{t('no_longer_pregnant')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.sheetBtnSecondary}
               onPress={handleTurnedOnByMistake}
             >
-              <Text style={styles.sheetBtnSecondaryText}>Turned on by mistake</Text>
+              <Text style={styles.sheetBtnSecondaryText}>{t('turned_on_by_mistake')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -172,7 +174,7 @@ const PregnancyMode = ({ navigation }) => {
           <View style={[styles.sheet, { backgroundColor: colors.white }]}>
             <View style={styles.homepageHeaderRow}>
               <Text style={[styles.homepageTitle, { color: colors.textPrimary }]}>
-                Please choose one option to show{'\n'}on the homepage
+                {t('choose_homepage_option')}
               </Text>
               <TouchableOpacity onPress={() => setShowHomepageModal(false)}>
                 <Text style={{ fontSize: 20, color: colors.textPrimary }}>✕</Text>
@@ -192,7 +194,7 @@ const PregnancyMode = ({ navigation }) => {
                 )}
               </View>
               <Text style={[styles.radioLabel, { color: colors.textPrimary }]}>
-                {daysToBaby} days to baby
+                {daysToBaby} {t('days_to_baby_suffix')}
               </Text>
             </TouchableOpacity>
 
@@ -209,7 +211,7 @@ const PregnancyMode = ({ navigation }) => {
                 )}
               </View>
               <Text style={[styles.radioLabel, { color: colors.textPrimary }]}>
-                {weeks}W{days}D since pregnancy
+                {weeks}W{days}D {t('since_pregnancy_suffix')}
               </Text>
             </TouchableOpacity>
 
@@ -217,7 +219,7 @@ const PregnancyMode = ({ navigation }) => {
               style={[styles.sheetBtnPrimary, { backgroundColor: colors.pink, marginTop: 16 }]}
               onPress={handleSaveHomepageChoice}
             >
-              <Text style={styles.sheetBtnPrimaryText}>Done</Text>
+              <Text style={styles.sheetBtnPrimaryText}>{t('done_btn')}</Text>
             </TouchableOpacity>
           </View>
         </View>

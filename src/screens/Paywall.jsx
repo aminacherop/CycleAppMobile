@@ -8,6 +8,7 @@ import {
   Modal,
 } from 'react-native'
 import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../context/LanguageContext'
 import { usePremium } from '../context/PremiumContext'
 
 const PRICES = {
@@ -17,6 +18,7 @@ const PRICES = {
 
 const Paywall = ({ visible, onClose, feature }) => {
   const { colors } = useTheme()
+  const { t } = useLanguage()
   const { activatePremium } = usePremium()
   const [plan, setPlan] = useState('monthly')
   const [step, setStep] = useState('plans')
@@ -40,12 +42,12 @@ const Paywall = ({ visible, onClose, feature }) => {
   }
 
   const premiumFeatures = [
-    { emoji: '🤖', label: 'AI health insights' },
-    { emoji: '📄', label: 'PDF health report export' },
-    { emoji: '👫', label: 'Partner sharing mode' },
-    { emoji: '🧬', label: 'Condition tracking' },
-    { emoji: '📊', label: 'Deep cycle analytics' },
-    { emoji: '🚫', label: 'No ads' },
+    { emoji: '🤖', label: t('ai_health_insights') },
+    { emoji: '📄', label: t('pdf_health_report_export') },
+    { emoji: '👫', label: t('partner_sharing_mode') },
+    { emoji: '🧬', label: t('condition_tracking') },
+    { emoji: '📊', label: t('deep_cycle_analytics') },
+    { emoji: '🚫', label: t('no_ads') },
   ]
 
   const styles = makeStyles(colors)
@@ -63,10 +65,10 @@ const Paywall = ({ visible, onClose, feature }) => {
 
               <View style={styles.header}>
                 <Text style={{ fontSize: 40 }}>👑</Text>
-                <Text style={[styles.title, { color: colors.textPrimary }]}>Unlock Premium</Text>
+                <Text style={[styles.title, { color: colors.textPrimary }]}>{t('unlock_premium').replace('👑 ', '')}</Text>
                 {feature && (
                   <Text style={[styles.featureHint, { color: colors.textSecondary }]}>
-                    🔒 {feature} is a premium feature
+                    🔒 {feature} {t('feature_is_premium')}
                   </Text>
                 )}
               </View>
@@ -77,7 +79,7 @@ const Paywall = ({ visible, onClose, feature }) => {
                   onPress={() => setPlan('monthly')}
                 >
                   <Text style={{ color: plan === 'monthly' ? colors.pink : colors.textSecondary, fontWeight: '600' }}>
-                    Monthly
+                    {t('monthly_plan')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -85,10 +87,10 @@ const Paywall = ({ visible, onClose, feature }) => {
                   onPress={() => setPlan('yearly')}
                 >
                   <Text style={{ color: plan === 'yearly' ? colors.pink : colors.textSecondary, fontWeight: '600' }}>
-                    Yearly
+                    {t('yearly_plan')}
                   </Text>
                   <View style={styles.saveBadge}>
-                    <Text style={{ color: 'white', fontSize: 9, fontWeight: '700' }}>Save 29%</Text>
+                    <Text style={{ color: 'white', fontSize: 9, fontWeight: '700' }}>{t('save_29_percent')}</Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -98,7 +100,7 @@ const Paywall = ({ visible, onClose, feature }) => {
                   {currency} {amount.toLocaleString()}
                 </Text>
                 <Text style={[styles.pricePeriod, { color: colors.textSecondary }]}>
-                  /{plan === 'monthly' ? 'mo' : 'yr'}
+                  {plan === 'monthly' ? t('per_mo') : t('per_yr')}
                 </Text>
               </View>
 
@@ -117,12 +119,12 @@ const Paywall = ({ visible, onClose, feature }) => {
                 onPress={handleSubscribe}
               >
                 <Text style={styles.subscribeBtnText}>
-                  Subscribe — {currency} {amount.toLocaleString()}/{plan === 'monthly' ? 'mo' : 'yr'}
+                  {t('subscribe_dash')} {currency} {amount.toLocaleString()}{plan === 'monthly' ? t('per_mo') : t('per_yr')}
                 </Text>
               </TouchableOpacity>
 
               <Text style={[styles.terms, { color: colors.textSecondary }]}>
-                Cancel anytime. Secure payment.
+                {t('cancel_anytime_secure')}
               </Text>
             </ScrollView>
           )}
@@ -131,7 +133,7 @@ const Paywall = ({ visible, onClose, feature }) => {
             <View style={styles.center}>
               <Text style={{ fontSize: 48 }}>🌸</Text>
               <Text style={[styles.processingText, { color: colors.textPrimary }]}>
-                Processing payment...
+                {t('processing_payment')}
               </Text>
             </View>
           )}
@@ -140,16 +142,16 @@ const Paywall = ({ visible, onClose, feature }) => {
             <View style={styles.center}>
               <Text style={{ fontSize: 64 }}>🎉</Text>
               <Text style={[styles.title, { color: colors.textPrimary, marginTop: 12 }]}>
-                Welcome to Premium!
+                {t('welcome_to_premium')}
               </Text>
               <Text style={[styles.featureHint, { color: colors.textSecondary, marginBottom: 20 }]}>
-                Your {plan} subscription is now active.
+                {t(plan === 'monthly' ? 'monthly_plan' : 'yearly_plan')} {t('subscription_active')}
               </Text>
               <TouchableOpacity
                 style={[styles.subscribeBtn, { backgroundColor: colors.pink }]}
                 onPress={handleClose}
               >
-                <Text style={styles.subscribeBtnText}>Start using Premium →</Text>
+                <Text style={styles.subscribeBtnText}>{t('start_using_premium')}</Text>
               </TouchableOpacity>
             </View>
           )}

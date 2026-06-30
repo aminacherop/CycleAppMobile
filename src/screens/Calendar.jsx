@@ -10,14 +10,14 @@ import {
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
-import { SYMPTOM_CATEGORIES } from '../utils/symptomCategories'
+import { SYMPTOM_CATEGORIES, getSymptomLabel as getLabel } from '../utils/symptomCategories'
 
 const { width } = Dimensions.get('window')
 const DAY_SIZE = (width - 32 - 12) / 7
 
 const Calendar = ({ cycleSettings, setCycleSettings, dailyLogs, navigation }) => {
   const { colors } = useTheme()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const [currentMonth, setCurrentMonth] = useState(dayjs())
   const [selectedDay, setSelectedDay] = useState(null)
   const [viewMode, setViewMode] = useState('cycle')
@@ -128,12 +128,15 @@ const Calendar = ({ cycleSettings, setCycleSettings, dailyLogs, navigation }) =>
   const allDetailedSymptoms = SYMPTOM_CATEGORIES.flatMap(c => c.items)
   const getSymptomLabel = (id) => {
     const item = allDetailedSymptoms.find(s => s.id === id)
-    return item ? `${item.emoji} ${item.label}` : id
+    return item ? `${item.emoji} ${getLabel(item, language)}` : id
   }
 
   const styles = makeStyles(colors)
 
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const weekDays = [
+    t('weekday_short_sun'), t('weekday_short_mon'), t('weekday_short_tue'),
+    t('weekday_short_wed'), t('weekday_short_thu'), t('weekday_short_fri'), t('weekday_short_sat'),
+  ]
 
   return (
     <ScrollView
@@ -303,18 +306,20 @@ const Calendar = ({ cycleSettings, setCycleSettings, dailyLogs, navigation }) =>
               <View style={[styles.savedLogCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
                 {savedLog.flow && savedLog.flow !== 'none' ? (
                   <View style={styles.savedLogRow}>
-                    <Text style={[styles.savedLogLabel, { color: colors.textSecondary }]}>Flow</Text>
-                    <Text style={[styles.savedLogValue, { color: colors.textPrimary }]}>{savedLog.flow}</Text>
+                    <Text style={[styles.savedLogLabel, { color: colors.textSecondary }]}>{t('period_flow')}</Text>
+                    <Text style={[styles.savedLogValue, { color: colors.textPrimary }]}>{t(`flow_${savedLog.flow}`)}</Text>
                   </View>
                 ) : null}
                 {savedLog.moods && savedLog.moods.length > 0 ? (
                   <View style={styles.savedLogRow}>
                     <Text style={[styles.savedLogLabel, { color: colors.textSecondary }]}>{t('mood')}</Text>
-                    <Text style={[styles.savedLogValue, { color: colors.textPrimary }]}>{savedLog.moods.join(', ')}</Text>
+                    <Text style={[styles.savedLogValue, { color: colors.textPrimary }]}>
+                      {savedLog.moods.map(m => t(`mood_${m}`)).join(', ')}
+                    </Text>
                   </View>
                 ) : null}
                 {(() => {
-                  const flatSymptoms = savedLog.symptoms || []
+                  const flatSymptoms = (savedLog.symptoms || []).map(s => t(`symptom_${s}`))
                   const detailedSymptoms = (savedLog.symptomsDetailed || []).map(getSymptomLabel)
                   const allSymptoms = [...flatSymptoms, ...detailedSymptoms]
                   if (allSymptoms.length === 0) return null

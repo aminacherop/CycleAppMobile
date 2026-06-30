@@ -341,7 +341,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
             <Text style={{ fontSize: 22 }}>👑</Text>
           </View>
           <Text style={[styles.iconLabel, { color: colors.textSecondary }]}>
-            {isPremium ? 'Premium' : 'Upgrade'}
+            {isPremium ? t('premium') : t('upgrade')}
           </Text>
         </TouchableOpacity>
       </View>

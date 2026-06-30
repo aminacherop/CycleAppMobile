@@ -8,11 +8,13 @@ import {
 } from 'react-native'
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
-import { SYMPTOM_CATEGORIES } from '../utils/symptomCategories'
+import { useLanguage } from '../context/LanguageContext'
+import { SYMPTOM_CATEGORIES, getSymptomLabel, getCategoryLabel } from '../utils/symptomCategories'
 import { loadData } from '../utils/storage'
 
 const AddSymptom = ({ todayLog, saveLog, navigation }) => {
   const { colors } = useTheme()
+  const { t, language } = useLanguage()
   const [selected, setSelected] = useState(todayLog?.symptomsDetailed || [])
   const [recentSymptoms, setRecentSymptoms] = useState([])
 
@@ -77,7 +79,7 @@ const AddSymptom = ({ todayLog, saveLog, navigation }) => {
           )}
         </View>
         <Text style={[styles.cellLabel, { color: colors.textSecondary }]} numberOfLines={2}>
-          {item.label}
+          {getSymptomLabel(item, language)}
         </Text>
       </TouchableOpacity>
     )
@@ -92,7 +94,7 @@ const AddSymptom = ({ todayLog, saveLog, navigation }) => {
           <Text style={{ fontSize: 22, color: colors.textPrimary }}>←</Text>
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-          Add Symptom
+          {t('add_symptom_title')}
         </Text>
         <Text style={{ fontSize: 18 }}>✏️</Text>
       </View>
@@ -102,7 +104,7 @@ const AddSymptom = ({ todayLog, saveLog, navigation }) => {
         {/* Recently added */}
         {recentSymptoms.length > 0 && (
           <View style={[styles.card, { backgroundColor: colors.white }]}>
-            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>Recent</Text>
+            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{t('recent')}</Text>
             <View style={styles.grid}>
               {recentSymptoms.map(id => {
                 const item = findItem(id)
@@ -117,7 +119,7 @@ const AddSymptom = ({ todayLog, saveLog, navigation }) => {
         {SYMPTOM_CATEGORIES.map(category => (
           <View key={category.id} style={[styles.card, { backgroundColor: colors.white }]}>
             <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-              {category.label}
+              {getCategoryLabel(category, language)}
             </Text>
             <View style={styles.grid}>
               {category.items.map(item => (
@@ -135,7 +137,7 @@ const AddSymptom = ({ todayLog, saveLog, navigation }) => {
           style={[styles.saveBtn, { backgroundColor: colors.pink }]}
           onPress={handleSave}
         >
-          <Text style={styles.saveBtnText}>Save</Text>
+          <Text style={styles.saveBtnText}>{t('save')}</Text>
         </TouchableOpacity>
       </View>
 

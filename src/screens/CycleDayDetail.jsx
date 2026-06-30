@@ -10,35 +10,37 @@ import {
 import Svg, { Polyline, Line, Text as SvgText } from 'react-native-svg'
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../context/LanguageContext'
 
 const { width } = Dimensions.get('window')
 const CHART_WIDTH = width - 64
 
-const PHASE_CONTENT = {
+const getPhaseContent = (t) => ({
   Menstrual: {
-    title: 'Menstrual phase',
-    desc: 'The uterine lining is shedding during this stage, resulting in menstrual bleeding. Hormone levels (estrogen and progesterone) are at their lowest point.',
-    symptoms: 'You may experience cramps, fatigue, lower back pain, and mood changes due to hormonal shifts and the shedding process.',
+    title: t('menstrual_phase_title'),
+    desc: t('menstrual_phase_desc'),
+    symptoms: t('menstrual_phase_symptoms'),
   },
   Follicular: {
-    title: 'Follicular phase',
-    desc: 'The uterine lining is thick and nutrient-rich at this stage, and blood vessels are still growing inside the uterine lining. Estrogen is rising.',
-    symptoms: 'You may begin to experience premenstrual syndrome (PMS) symptoms during this time due to hormonal changes.',
+    title: t('follicular_phase_title'),
+    desc: t('follicular_phase_desc'),
+    symptoms: t('follicular_phase_symptoms'),
   },
   Ovulation: {
-    title: 'Ovulation phase',
-    desc: 'An egg is released from the ovary during this stage. Estrogen peaks and this is your most fertile window of the cycle.',
-    symptoms: 'You may notice clear, stretchy discharge, slight pelvic pain, breast tenderness, or increased sex drive.',
+    title: t('ovulation_phase_title'),
+    desc: t('ovulation_phase_desc'),
+    symptoms: t('ovulation_phase_symptoms'),
   },
   Luteal: {
-    title: 'Luteal phase',
-    desc: 'The uterine lining is thick and nutrient-rich at this stage, and blood vessels are still growing inside the uterine lining.',
-    symptoms: 'You may experience breast tenderness or sensitivity, mood swings, and abdominal discomfort due to hormonal changes.',
+    title: t('luteal_phase_title'),
+    desc: t('luteal_phase_desc'),
+    symptoms: t('luteal_phase_symptoms'),
   },
-}
+})
 
 const CycleDayDetail = ({ cycleSettings, navigation }) => {
   const { colors } = useTheme()
+  const { t } = useLanguage()
   const [showMore, setShowMore] = useState(true)
 
   const cycleLength = cycleSettings?.cycleLength || 28
@@ -56,6 +58,7 @@ const CycleDayDetail = ({ cycleSettings, navigation }) => {
     cycleDay <= ovulationDay - 2 ? 'Follicular' :
     cycleDay <= ovulationDay + 2 ? 'Ovulation' : 'Luteal'
 
+  const PHASE_CONTENT = getPhaseContent(t)
   const content = PHASE_CONTENT[currentPhase]
 
   // Build conception chance curve across the cycle
@@ -86,12 +89,12 @@ const CycleDayDetail = ({ cycleSettings, navigation }) => {
   const todayX = getX(cycleDay)
 
   const currentChance = curve.find(p => p.day === cycleDay)?.chance || 0
-  const conceptionLevel =
-    currentChance >= 60 ? 'HIGH' :
-    currentChance >= 25 ? 'MEDIUM' : 'LOW'
+  const conceptionLevelKey =
+    currentChance >= 60 ? 'level_high' :
+    currentChance >= 25 ? 'level_medium' : 'level_low'
   const levelColor =
-    conceptionLevel === 'HIGH' ? '#EF4444' :
-    conceptionLevel === 'MEDIUM' ? '#F59E0B' : colors.pink
+    conceptionLevelKey === 'level_high' ? '#EF4444' :
+    conceptionLevelKey === 'level_medium' ? '#F59E0B' : colors.pink
 
   const styles = makeStyles(colors)
 
@@ -108,10 +111,10 @@ const CycleDayDetail = ({ cycleSettings, navigation }) => {
       </TouchableOpacity>
 
       <Text style={[styles.dayTitle, { color: colors.textPrimary }]}>
-        Cycle Day {cycleDay}
+        {t('cycle_day_title')} {cycleDay}
       </Text>
       <Text style={[styles.phaseSub, { color: colors.textSecondary }]}>
-        Current · {content.title}
+        {t('current_dot')} {content.title}
       </Text>
 
       <Text style={[styles.descText, { color: colors.textSecondary }]}>
@@ -125,28 +128,28 @@ const CycleDayDetail = ({ cycleSettings, navigation }) => {
             style={{ color: '#5B4FE5', fontWeight: '600' }}
             onPress={() => setShowMore(false)}
           >
-            {' '}Hide ↑
+            {' '}{t('hide_arrow')}
           </Text>
         </Text>
       )}
       {!showMore && (
         <TouchableOpacity onPress={() => setShowMore(true)}>
           <Text style={{ color: '#5B4FE5', fontWeight: '600', marginTop: 8 }}>
-            Show more ↓
+            {t('show_more_arrow')}
           </Text>
         </TouchableOpacity>
       )}
 
       {/* Possible symptoms card */}
       <View style={[styles.symptomsCard, { backgroundColor: '#D6E8F0' }]}>
-        <Text style={styles.symptomsTitle}>Possible symptoms</Text>
+        <Text style={styles.symptomsTitle}>{t('possible_symptoms')}</Text>
         <Text style={styles.symptomsDesc}>{content.symptoms}</Text>
       </View>
 
       {/* Conception chart card */}
       <View style={[styles.chartCard, { backgroundColor: colors.pinkLight }]}>
-        <Text style={[styles.chanceLevel, { color: levelColor }]}>{conceptionLevel}</Text>
-        <Text style={[styles.chanceLabel, { color: colors.pink }]}>Chance of Conception</Text>
+        <Text style={[styles.chanceLevel, { color: levelColor }]}>{t(conceptionLevelKey)}</Text>
+        <Text style={[styles.chanceLabel, { color: colors.pink }]}>{t('chance_of_conception')}</Text>
 
         <View style={styles.chartWrap}>
           <Svg width={CHART_WIDTH} height={chartHeight + 20}>
@@ -168,20 +171,20 @@ const CycleDayDetail = ({ cycleSettings, navigation }) => {
           </Svg>
 
           <View style={[styles.todayBadge, { left: Math.max(0, todayX - 28) }]}>
-            <Text style={styles.todayBadgeText}>Today</Text>
+            <Text style={styles.todayBadgeText}>{t('today')}</Text>
           </View>
 
-          <Text style={[styles.axisLabel, styles.axisHigh, { color: colors.pink }]}>HIGH</Text>
-          <Text style={[styles.axisLabel, styles.axisMedium, { color: colors.pink }]}>MEDIUM</Text>
-          <Text style={[styles.axisLabel, styles.axisLow, { color: colors.pink }]}>LOW</Text>
+          <Text style={[styles.axisLabel, styles.axisHigh, { color: colors.pink }]}>{t('level_high')}</Text>
+          <Text style={[styles.axisLabel, styles.axisMedium, { color: colors.pink }]}>{t('level_medium')}</Text>
+          <Text style={[styles.axisLabel, styles.axisLow, { color: colors.pink }]}>{t('level_low')}</Text>
         </View>
 
         <View style={styles.chartFooter}>
           <Text style={[styles.chartFooterText, { color: colors.textPrimary }]}>
-            Cycle Day {cycleDay}
+            {t('cycle_day_title')} {cycleDay}
           </Text>
           <Text style={[styles.chartFooterText, { color: colors.pink }]}>
-            Conception chance
+            {t('conception_chance')}
           </Text>
         </View>
       </View>

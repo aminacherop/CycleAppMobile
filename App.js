@@ -3,7 +3,7 @@ import { useRef, useEffect } from 'react'
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createStackNavigator } from '@react-navigation/stack'
-import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Text, View, ActivityIndicator, StyleSheet } from 'react-native'
 import * as Notifications from 'expo-notifications'
 import * as SplashScreen from 'expo-splash-screen'
@@ -207,11 +207,15 @@ const AnalysisStackNavigator = ({ appData }) => (
 )
 
 
-const TabNavigator = ({ appData }) => (
+const TabNavigator = ({ appData }) => {
+  const insets = useSafeAreaInsets()
+  const bottomPad = Math.max(insets.bottom, 12)
+
+  return (
   <Tab.Navigator
     screenOptions={({ route }) => ({
       headerShown: false,
-      tabBarStyle: styles.tabBar,
+      tabBarStyle: [styles.tabBar, { paddingBottom: bottomPad, height: 52 + bottomPad }],
       tabBarActiveTintColor: '#C2527A',
       tabBarInactiveTintColor: '#6B7280',
       tabBarLabelStyle: styles.tabLabel,
@@ -250,7 +254,8 @@ const TabNavigator = ({ appData }) => (
       {() => <ProfileStackNavigator appData={appData} />}
     </Tab.Screen>
   </Tab.Navigator>
-)
+  )
+}
 
 const AppContent = () => {
   const appData = useAppData()

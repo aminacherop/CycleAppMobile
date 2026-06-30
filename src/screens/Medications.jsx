@@ -11,6 +11,7 @@ import {
 import dayjs from 'dayjs'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../context/LanguageContext'
 import {
   MEDICATION_TYPES,
   loadMedications,
@@ -29,6 +30,7 @@ import {
 
 const Medications = ({ navigation }) => {
   const { colors } = useTheme()
+  const { t } = useLanguage()
   const [medications, setMedications] = useState([])
   const [todayLogs, setTodayLogs] = useState({})
   const [loading, setLoading] = useState(true)
@@ -123,7 +125,7 @@ const Medications = ({ navigation }) => {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <Text style={{ fontSize: 40 }}>💊</Text>
-        <Text style={{ color: colors.textSecondary, marginTop: 10 }}>Loading...</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 10 }}>{t('loading')}</Text>
       </View>
     )
   }
@@ -134,11 +136,11 @@ const Medications = ({ navigation }) => {
       contentContainerStyle={styles.scrollContent}
     >
       <TouchableOpacity activeOpacity={0.6} style={styles.backBtn} onPress={() => navigation.goBack()}>
-        <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>← Back</Text>
+        <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>← {t('back')}</Text>
       </TouchableOpacity>
-      <Text style={[styles.title, { color: colors.textPrimary }]}>Pills & Supplements</Text>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{t('pills_supplements')}</Text>
       <Text style={[styles.sub, { color: colors.textSecondary }]}>
-        {activeMeds.length} active reminder{activeMeds.length !== 1 ? 's' : ''}
+        {activeMeds.length} {activeMeds.length !== 1 ? t('active_reminders_plural') : t('active_reminders')}
       </Text>
 
       {/* Today status */}
@@ -147,10 +149,10 @@ const Medications = ({ navigation }) => {
           <Text style={{ fontSize: 30 }}>{allTaken ? '🎉' : '💊'}</Text>
           <View style={{ flex: 1 }}>
             <Text style={[styles.todayTitle, { color: colors.textPrimary }]}>
-              {allTaken ? 'All done for today!' : "Today's medications"}
+              {allTaken ? t('all_done_today') : t('todays_medications')}
             </Text>
             <Text style={[styles.todayDesc, { color: colors.textSecondary }]}>
-              {takenCount} of {activeMeds.length} taken
+              {takenCount} {t('of')} {activeMeds.length} {t('taken_of')}
             </Text>
           </View>
         </View>
@@ -160,16 +162,15 @@ const Medications = ({ navigation }) => {
       {medications.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Text style={{ fontSize: 48 }}>💊</Text>
-          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No medications yet</Text>
+          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{t('no_medications_yet')}</Text>
           <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
-            Add your birth control pill, folic acid, or iron supplement
-            to get daily reminders.
+            {t('no_medications_desc')}
           </Text>
           <TouchableOpacity
             style={[styles.emptyAddBtn, { backgroundColor: colors.pink }]}
             onPress={() => setShowAddModal(true)}
           >
-            <Text style={styles.emptyAddBtnText}>+ Add your first medication</Text>
+            <Text style={styles.emptyAddBtnText}>{t('add_first_medication')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -211,7 +212,7 @@ const Medications = ({ navigation }) => {
                 <View style={styles.statsRow}>
                   {streak > 0 && (
                     <View style={[styles.statTag, { backgroundColor: '#FEF3C7' }]}>
-                      <Text style={{ color: '#92400E', fontSize: 11, fontWeight: '600' }}>🔥 {streak}d streak</Text>
+                      <Text style={{ color: '#92400E', fontSize: 11, fontWeight: '600' }}>🔥 {streak}{t('day_streak')}</Text>
                     </View>
                   )}
                   {adherence !== null && (
@@ -227,14 +228,14 @@ const Medications = ({ navigation }) => {
                     onPress={() => handleToggleActive(med.id, med.active)}
                   >
                     <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                      {med.active ? '⏸ Pause' : '▶ Resume'}
+                      {med.active ? t('pause') : t('resume')}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.actionBtn, { borderColor: '#EF4444' }]}
                     onPress={() => handleDelete(med.id)}
                   >
-                    <Text style={{ color: '#EF4444', fontSize: 12 }}>🗑 Delete</Text>
+                    <Text style={{ color: '#EF4444', fontSize: 12 }}>🗑 {t('delete')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -248,7 +249,7 @@ const Medications = ({ navigation }) => {
         onPress={() => setShowAddModal(true)}
       >
         <Text style={{ color: colors.pink, fontWeight: '600', fontSize: 14 }}>
-          + Add pill or supplement
+          {t('add_pill_supplement')}
         </Text>
       </TouchableOpacity>
 
@@ -257,7 +258,7 @@ const Medications = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.white }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>💊 Add medication</Text>
+              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t('add_medication_title')}</Text>
 
               <View style={styles.typeGrid}>
                 {MEDICATION_TYPES.map(type => (
@@ -282,25 +283,25 @@ const Medications = ({ navigation }) => {
                 ))}
               </View>
 
-              <Text style={[styles.label, { color: colors.textPrimary }]}>Name *</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>{t('name_required')}</Text>
               <TextInput
                 style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
-                placeholder="e.g. Yasmin, Folic acid"
+                placeholder={t("name_med_placeholder")}
                 placeholderTextColor={colors.textSecondary}
                 value={newMed.name}
                 onChangeText={t => setNewMed(prev => ({ ...prev, name: t }))}
               />
 
-              <Text style={[styles.label, { color: colors.textPrimary }]}>Dosage (optional)</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>{t('dosage')}</Text>
               <TextInput
                 style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
-                placeholder="e.g. 1 tablet, 400mcg"
+                placeholder={t("dosage_placeholder")}
                 placeholderTextColor={colors.textSecondary}
                 value={newMed.dosage}
                 onChangeText={t => setNewMed(prev => ({ ...prev, dosage: t }))}
               />
 
-              <Text style={[styles.label, { color: colors.textPrimary }]}>Start date</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>{t('start_date')}</Text>
               <TouchableOpacity
                 style={[styles.input, { borderColor: colors.border, backgroundColor: colors.background, justifyContent: 'center' }]}
                 onPress={() => setShowDatePicker(true)}
@@ -324,7 +325,7 @@ const Medications = ({ navigation }) => {
                 />
               )}
 
-              <Text style={[styles.label, { color: colors.textPrimary }]}>Reminder time</Text>
+              <Text style={[styles.label, { color: colors.textPrimary }]}>{t('reminder_time')}</Text>
               <TouchableOpacity
                 style={[styles.input, { borderColor: colors.border, backgroundColor: colors.background, justifyContent: 'center' }]}
                 onPress={() => setShowTimePicker(true)}
@@ -353,14 +354,14 @@ const Medications = ({ navigation }) => {
                   style={[styles.modalCancel, { borderColor: colors.border }]}
                   onPress={() => setShowAddModal(false)}
                 >
-                  <Text style={{ color: colors.textSecondary }}>Cancel</Text>
+                  <Text style={{ color: colors.textSecondary }}>{t('cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalSave, { backgroundColor: newMed.name.trim() ? colors.pink : colors.border }]}
                   onPress={handleAddMedication}
                   disabled={!newMed.name.trim()}
                 >
-                  <Text style={{ color: 'white', fontWeight: '700' }}>Add reminder ✓</Text>
+                  <Text style={{ color: 'white', fontWeight: '700' }}>{t('add_reminder_btn')}</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
