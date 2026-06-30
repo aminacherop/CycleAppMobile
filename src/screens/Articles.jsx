@@ -47,9 +47,9 @@ See a gynaecologist if periods last longer than 7 days, bleeding is very heavy, 
     color: '#7C3AED',
     emoji: '🔵',
     title: 'PCOS — What Every Woman Should Know',
-    subtitle: 'Symptoms, diagnosis, and managing PCOS in Kenya',
+    subtitle: 'Symptoms, diagnosis, and managing PCOS',
     readTime: '7 min read',
-    content: `Polycystic Ovary Syndrome (PCOS) is one of the most common hormonal disorders affecting women. In Kenya, it's estimated to affect 1 in 10 women.
+    content: `Polycystic Ovary Syndrome (PCOS) is one of the most common hormonal disorders affecting women. It's estimated to affect roughly 1 in 10 women of reproductive age worldwide.
 
 COMMON SYMPTOMS
 Irregular periods, excess hair growth, acne on jawline, weight gain around the abdomen, thinning scalp hair, difficulty getting pregnant.
@@ -62,8 +62,8 @@ Exercise: 30 minutes moderate exercise 5 days a week. Strength training improves
 MEDICAL TREATMENTS
 Hormonal birth control regulates periods. Metformin improves insulin sensitivity. Clomiphene stimulates ovulation for those trying to conceive.
 
-GETTING HELP IN KENYA
-Kenyatta National Hospital, Aga Khan University Hospital, MP Shah Hospital, and most county referral hospitals offer PCOS diagnosis and treatment.`,
+GETTING HELP
+A gynaecologist or endocrinologist can diagnose PCOS through blood tests and an ultrasound. Most public and private hospitals offer PCOS diagnosis and treatment — ask your local health provider or clinic for a referral.`,
   },
   {
     id: 3,
@@ -88,32 +88,32 @@ METHOD 3 — BASAL BODY TEMPERATURE
 Take your temperature every morning before getting up. After ovulation it rises by 0.2–0.5°C.
 
 METHOD 4 — OVULATION TEST STRIPS
-Detect the LH hormone surge 24–36 hours before ovulation. Available at Nairobi pharmacies for KSh 200–500.`,
+Detect the LH hormone surge 24–36 hours before ovulation. Widely available at pharmacies and online retailers.`,
   },
   {
     id: 4,
     category: 'Nutrition',
     color: '#F59E0B',
     emoji: '🥗',
-    title: 'Eating for Your Cycle — Kenyan Food Guide',
-    subtitle: 'Local foods that support each phase of your cycle',
+    title: 'Eating for Your Cycle — Nutrition Guide',
+    subtitle: 'Foods that support each phase of your cycle',
     readTime: '6 min read',
-    content: `Your nutritional needs change throughout your cycle. Here's how to eat well using affordable Kenyan foods.
+    content: `Your nutritional needs change throughout your cycle. Here's how to eat well during each phase.
 
 MENSTRUAL PHASE — REPLENISH IRON
-Terere (amaranth leaves), kunde (cowpeas), nyama choma, liver — all rich in iron.
+Leafy greens, beans and lentils, red meat or liver, and iron-fortified cereals all help replace iron lost during your period.
 
 FOLLICULAR PHASE — SUPPORT ESTROGEN
-Eggs, fish (tilapia, omena), avocado, githeri for complete protein.
+Eggs, fish, avocado, and a mix of legumes and whole grains provide the complete protein and healthy fats your body needs as estrogen rises.
 
 OVULATION PHASE — ANTI-INFLAMMATORY
-Omena (dagaa), turmeric, ginger, fresh kachumbari.
+Oily fish, turmeric, ginger, and fresh vegetables help support your body during peak fertility.
 
 LUTEAL PHASE — REDUCE PMS
-Sweet potatoes, bananas, groundnuts, dark chocolate in moderation, herbal teas like chamomile and ginger.
+Complex carbohydrates like sweet potatoes, bananas, nuts, dark chocolate in moderation, and herbal teas like chamomile and ginger can ease PMS symptoms.
 
 FOODS TO LIMIT
-Excess salt, caffeine, alcohol, processed foods, and soda throughout your cycle.`,
+Excess salt, caffeine, alcohol, processed foods, and sugary drinks throughout your cycle.`,
   },
   {
     id: 5,
@@ -159,8 +159,8 @@ The only definitive diagnosis is through laparoscopy — a minor surgical proced
 TREATMENT OPTIONS
 Pain management with NSAIDs and heat therapy. Hormonal treatments like birth control pills. Laparoscopic surgery for severe cases.
 
-GETTING HELP IN KENYA
-Kenyatta National Hospital, Aga Khan University Hospital, Nairobi Hospital, and MP Shah Hospital all offer specialist care.`,
+GETTING HELP
+A gynaecologist who specializes in endometriosis can help with diagnosis and treatment planning. Ask your primary care provider for a referral, or search for an endometriosis specialist near you.`,
   },
 ]
 

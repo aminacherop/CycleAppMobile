@@ -115,7 +115,7 @@ const Onboarding = ({ onComplete }) => {
           </Text>
 
           <Text style={[styles.desc, { color: colors.textSecondary }]}>
-            Your personal period tracker built for Kenyan women.
+            Your personal period tracker for every woman.
             Private, offline-first, and designed around your body.
           </Text>
 

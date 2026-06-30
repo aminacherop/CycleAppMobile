@@ -213,7 +213,7 @@ export const translations = {
 
     // ── ONBOARDING ───────────────────────────────
     welcome_title: 'Welcome to\nCycleApp 🌸',
-    welcome_desc: 'Your personal period tracker built for Kenyan women. Private, offline-first, and designed around your body.',
+    welcome_desc: 'Your personal period tracker for every woman. Private, offline-first, and designed around your body.',
     get_started: 'Get started →',
     skip_setup: "Skip setup — I'll configure later",
     tell_us: 'Tell us about yourself',
@@ -471,7 +471,7 @@ export const translations = {
 
     // ── ONBOARDING ───────────────────────────────
     welcome_title: 'Karibu kwenye\nCycleApp 🌸',
-    welcome_desc: 'Mfuatiliaji wako wa hedhi ulioundwa kwa wanawake wa Kenya. Faragha, unafanya kazi bila mtandao, na umeundwa kwa mwili wako.',
+    welcome_desc: 'Mfuatiliaji wako wa hedhi binafsi. Faragha, unafanya kazi bila mtandao, na umeundwa kwa mwili wako.',
     get_started: 'Anza →',
     skip_setup: 'Ruka usanidi — nitasanidi baadaye',
     tell_us: 'Tuambie kuhusu wewe',

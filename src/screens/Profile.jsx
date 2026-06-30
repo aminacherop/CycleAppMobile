@@ -7,6 +7,7 @@ import {
     TextInput,
     StyleSheet,
     Modal,
+    Linking,
 } from 'react-native'
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
@@ -445,6 +446,16 @@ const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile,
                         >
                             <Text style={{ fontSize: 18 }}>📚</Text>
                             <Text style={[styles.navItemLabel, { color: colors.textPrimary }]}>{t('health_articles')}</Text>
+                            <Text style={{ color: colors.textSecondary }}>→</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            activeOpacity={0.6}
+                            style={[styles.navItem, { borderBottomColor: colors.border, borderBottomWidth: 0 }]}
+                            onPress={() => Linking.openURL('https://sites.google.com/view/cycleapp-privacy/home')}
+                        >
+                            <Text style={{ fontSize: 18 }}>🔒</Text>
+                            <Text style={[styles.navItemLabel, { color: colors.textPrimary }]}>Privacy Policy</Text>
                             <Text style={{ color: colors.textSecondary }}>→</Text>
                         </TouchableOpacity>
                     </View>
