@@ -16,6 +16,7 @@ import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import { saveData, loadData } from '../utils/storage'
 import { getSymptomCorrelations, getCycleRegularitySummary } from '../utils/insightEngine'
+import { detectPeriodStartsFromLogs, calculateHistoricalCycleLengths } from '../utils/cyclePrediction'
 import {
   requestNotificationPermission,
   getNotificationPermission,
@@ -292,6 +293,9 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
 
   const symptomInsights = getSymptomCorrelations(dailyLogs, cycleSettings)
   const regularitySummary = getCycleRegularitySummary(dailyLogs, cycleSettings)
+  const periodStarts = detectPeriodStartsFromLogs(dailyLogs)
+  const historicalLengths = calculateHistoricalCycleLengths(periodStarts)
+  const last3Cycles = historicalLengths.slice(-3)
 
   const phaseColors = { Menstrual: '#EC4899', Follicular: '#7C3AED', Ovulation: '#F59E0B', Luteal: '#10B981' }
 
@@ -537,6 +541,59 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
         )}
       </TouchableOpacity>
       {/* ── MY CYCLES CARD ── */}
+
+      {/* CYCLE COMPARISON CHART */}
+      {last3Cycles.length >= 1 ? (
+        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.border }]}>
+          <View style={styles.cardTitleRow}>
+            <Text style={{ fontSize: 18 }}>📈</Text>
+            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{t('cycle_comparison') || 'Cycle Comparison'}</Text>
+          </View>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 12 }}>
+            {t('last_n_cycles') || 'Last'} {last3Cycles.length} {t('cycles_label') || 'cycles'}
+          </Text>
+          {/* Bar chart */}
+          <View style={{ gap: 10 }}>
+            {last3Cycles.map((length, i) => {
+              const maxLen = Math.max(...last3Cycles)
+              const barWidth = (length / maxLen) * 100
+              const cycleNum = historicalLengths.length - last3Cycles.length + i + 1
+              const barColor = i === last3Cycles.length - 1 ? colors.pink : i === last3Cycles.length - 2 ? '#7C3AED' : '#10B981'
+              return (
+                <View key={i} style={{ gap: 4 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+                      {t('cycle_label') || 'Cycle'} {cycleNum}
+                    </Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: barColor }}>
+                      {length}d
+                    </Text>
+                  </View>
+                  <View style={{ height: 10, backgroundColor: colors.background, borderRadius: 5, overflow: 'hidden' }}>
+                    <View style={{ width: barWidth + '%', height: '100%', backgroundColor: barColor, borderRadius: 5 }} />
+                  </View>
+                </View>
+              )
+            })}
+          </View>
+          {/* Average line */}
+          {regularitySummary && (
+            <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>{t('avg_cycle_length')}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.pink }}>{regularitySummary.avg}d</Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.border }]}>
+          <View style={styles.cardTitleRow}>
+            <Text style={{ fontSize: 18 }}>📈</Text>
+            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{t('cycle_comparison')}</Text>
+          </View>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>{t('not_enough_data')}</Text>
+        </View>
+      )}
+
       <TouchableOpacity
         style={[styles.card, { backgroundColor: colors.white, borderColor: colors.border }]}
         onPress={() => navigation?.navigate('MyCycles')}

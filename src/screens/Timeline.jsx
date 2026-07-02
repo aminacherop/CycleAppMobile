@@ -31,8 +31,22 @@ const Timeline = ({ cycleSettings, dailyLogs, navigation }) => {
         if (log.pregnancyTest && log.pregnancyTest !== 'notaken') {
           events.push({
             date,
-            label: `${t('pregnancy_test_label')}: ${log.pregnancyTest}`,
-            color: '#8B5CF6',
+            label: `${t('pregnancy_test')}: ${t('test_' + log.pregnancyTest) || log.pregnancyTest}`,
+            color: log.pregnancyTest === 'positive' ? '#10B981' : '#EF4444',
+          })
+        }
+        if (log.mucus) {
+          events.push({
+            date,
+            label: `💧 ${t('cervical_mucus')}: ${t('mucus_' + log.mucus) || log.mucus}`,
+            color: '#0EA5E9',
+          })
+        }
+        if (log.bbt) {
+          events.push({
+            date,
+            label: `🌡️ ${t('bbt_temperature')}: ${log.bbt}°C`,
+            color: '#F59E0B',
           })
         }
         if (log.periodStatus === 'started') {

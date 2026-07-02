@@ -24,6 +24,11 @@ const LogToday = ({ saveLog, todayLog, navigation }) => {
   const [water, setWater] = useState(todayLog?.water || 0)
   const [sleep, setSleep] = useState(todayLog?.sleep || 7)
   const [notes, setNotes] = useState(todayLog?.notes || '')
+  const [mucus, setMucus] = useState(todayLog?.mucus || null)
+  const [bbt, setBbt] = useState(todayLog?.bbt || '')
+  const [pregnancyTest, setPregnancyTest] = useState(todayLog?.pregnancyTest || null)
+  const [weight, setWeight] = useState(todayLog?.weight ? String(todayLog.weight) : '')
+  const [intimacy, setIntimacy] = useState(todayLog?.intimacy || null)
   const [saved, setSaved] = useState(false)
 
   const flowOptions = [
@@ -61,6 +66,11 @@ const LogToday = ({ saveLog, todayLog, navigation }) => {
       water,
       sleep,
       notes,
+      mucus,
+      bbt: bbt ? parseFloat(bbt) : null,
+      pregnancyTest,
+      weight: weight ? parseFloat(weight) : null,
+      intimacy,
     }
     if (saveLog) {
       await saveLog(dayjs().format('YYYY-MM-DD'), logEntry)
@@ -221,6 +231,135 @@ const LogToday = ({ saveLog, todayLog, navigation }) => {
         />
       </View>
 
+      {/* Cervical Mucus */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>💧 {t('cervical_mucus') || 'Cervical Mucus'}</Text>
+        <View style={styles.tagGrid}>
+          {[
+            { id: 'dry', emoji: '🏜️' },
+            { id: 'sticky', emoji: '🍯' },
+            { id: 'creamy', emoji: '🥛' },
+            { id: 'watery', emoji: '💦' },
+            { id: 'eggwhite', emoji: '🥚' },
+          ].map(option => (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.tagBtn,
+                {
+                  backgroundColor: mucus === option.id ? colors.pinkLight : colors.white,
+                  borderColor: mucus === option.id ? colors.pink : colors.border,
+                },
+              ]}
+              onPress={() => setMucus(mucus === option.id ? null : option.id)}
+            >
+              <Text style={[styles.tagText, { color: mucus === option.id ? colors.pinkDark : colors.textPrimary }]}>
+                {option.emoji} {t('mucus_' + option.id) || option.id}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* BBT Temperature */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>🌡️ {t('bbt_temperature') || 'BBT Temperature'}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <TextInput
+            style={[styles.bbtInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.white }]}
+            placeholder="36.5"
+            placeholderTextColor={colors.textSecondary}
+            value={bbt}
+            onChangeText={setBbt}
+            keyboardType="decimal-pad"
+            maxLength={5}
+          />
+          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>°C</Text>
+        </View>
+        <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 6 }}>
+          {t('bbt_hint') || 'Measure every morning before getting up'}
+        </Text>
+      </View>
+
+      {/* Pregnancy Test */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>🤰 {t('pregnancy_test') || 'Pregnancy Test'}</Text>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {[
+            { id: 'positive', emoji: '✅', color: '#10B981' },
+            { id: 'negative', emoji: '❌', color: '#EF4444' },
+            { id: 'notaken', emoji: '➖', color: colors.textSecondary },
+          ].map(option => (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.tagBtn,
+                {
+                  backgroundColor: pregnancyTest === option.id ? option.color + '20' : colors.white,
+                  borderColor: pregnancyTest === option.id ? option.color : colors.border,
+                  flex: 1,
+                  alignItems: 'center',
+                },
+              ]}
+              onPress={() => setPregnancyTest(pregnancyTest === option.id ? null : option.id)}
+            >
+              <Text style={{ fontSize: 18 }}>{option.emoji}</Text>
+              <Text style={[styles.tagText, { color: pregnancyTest === option.id ? option.color : colors.textPrimary }]}>
+                {t('test_' + option.id) || option.id}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Weight */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>⚖️ {t('weight') || 'Weight'}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <TextInput
+            style={[styles.bbtInput, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.white }]}
+            placeholder="65.0"
+            placeholderTextColor={colors.textSecondary}
+            value={weight}
+            onChangeText={setWeight}
+            keyboardType="decimal-pad"
+            maxLength={5}
+          />
+          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>kg</Text>
+        </View>
+      </View>
+
+      {/* Intimacy */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>💕 {t('intimacy') || 'Intimacy'}</Text>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {[
+            { id: 'protected', emoji: '🛡️' },
+            { id: 'unprotected', emoji: '💕' },
+            { id: 'none', emoji: '➖' },
+          ].map(option => (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.tagBtn,
+                {
+                  backgroundColor: intimacy === option.id ? colors.pinkLight : colors.white,
+                  borderColor: intimacy === option.id ? colors.pink : colors.border,
+                  flex: 1,
+                  alignItems: 'center',
+                },
+              ]}
+              onPress={() => setIntimacy(intimacy === option.id ? null : option.id)}
+            >
+              <Text style={{ fontSize: 18 }}>{option.emoji}</Text>
+              <Text style={[styles.tagText, { color: intimacy === option.id ? colors.pinkDark : colors.textPrimary }]}>
+                {t('intimacy_' + option.id) || option.id}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
       {/* Save button */}
       <TouchableOpacity
         style={[
@@ -285,6 +424,7 @@ const makeStyles = (colors) => StyleSheet.create({
     justifyContent: 'center',
   },
   notesInput: {
+  bbtInput: { borderWidth: 1.5, borderRadius: 10, padding: 12, fontSize: 18, fontWeight: '700', width: 100, textAlign: 'center' },
     borderWidth: 1.5,
     borderRadius: 12,
     padding: 14,

@@ -230,6 +230,11 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
               <th>Symptoms</th>
               <th>Water</th>
               <th>Sleep</th>
+              <th>Mucus</th>
+              <th>Weight</th>
+              <th>Intimacy</th>
+              <th>BBT</th>
+              <th>Preg. Test</th>
             </tr>
             ${recentLogs.length === 0
               ? '<tr><td colspan="6" style="text-align:center;color:#9CA3AF;">No logs in the last 30 days</td></tr>'
@@ -241,6 +246,11 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
                   <td>${[...(log.symptoms || []), ...((log.symptomsDetailed || []).map(getSymptomLabel))].join(', ') || '—'}</td>
                   <td>${log.water ? log.water + '/8' : '—'}</td>
                   <td>${log.sleep ? log.sleep + 'h' : '—'}</td>
+                  <td>${log.mucus || '—'}</td>
+                  <td>${log.weight ? log.weight + 'kg' : '—'}</td>
+                  <td>${log.intimacy || '—'}</td>
+                  <td>${log.bbt ? log.bbt + '°C' : '—'}</td>
+                  <td>${log.pregnancyTest && log.pregnancyTest !== 'notaken' ? log.pregnancyTest : '—'}</td>
                 </tr>
               `).join('')}
           </table>
