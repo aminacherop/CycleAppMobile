@@ -9,16 +9,18 @@ import {
 } from 'react-native'
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
+import { SYMPTOM_CATEGORIES, getSymptomLabel } from '../utils/symptomCategories'
 import { useLanguage } from '../context/LanguageContext'
 
-const LogToday = ({ saveLog, todayLog }) => {
+const LogToday = ({ saveLog, todayLog, navigation }) => {
   const { colors } = useTheme()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  const allDetailedSymptoms = SYMPTOM_CATEGORIES.flatMap(c => c.items)
   const today = dayjs().format('dddd, MMMM D YYYY')
 
   const [flow, setFlow] = useState(todayLog?.flow || null)
   const [moods, setMoods] = useState(todayLog?.moods || [])
-  const [symptoms, setSymptoms] = useState(todayLog?.symptoms || [])
+
   const [water, setWater] = useState(todayLog?.water || 0)
   const [sleep, setSleep] = useState(todayLog?.sleep || 7)
   const [notes, setNotes] = useState(todayLog?.notes || '')
@@ -43,18 +45,7 @@ const LogToday = ({ saveLog, todayLog }) => {
     { id: 'moody', label: t('mood_moody'), emoji: '🌊' },
   ]
 
-  const symptomOptions = [
-    { id: 'cramps', label: t('symptom_cramps'), emoji: '⚡' },
-    { id: 'headache', label: t('symptom_headache'), emoji: '🤕' },
-    { id: 'bloating', label: t('symptom_bloating'), emoji: '🫧' },
-    { id: 'backpain', label: t('symptom_backpain'), emoji: '🦴' },
-    { id: 'nausea', label: t('symptom_nausea'), emoji: '🤢' },
-    { id: 'breasttender', label: t('symptom_breasttender'), emoji: '💗' },
-    { id: 'acne', label: t('symptom_acne'), emoji: '😖' },
-    { id: 'cravings', label: t('symptom_cravings'), emoji: '🍫' },
-    { id: 'insomnia', label: t('symptom_insomnia'), emoji: '🌙' },
-    { id: 'dizziness', label: 'Dizziness', emoji: '💫' },
-  ]
+
 
   const toggleItem = (id, list, setList) => {
     setList(prev =>
@@ -67,7 +58,6 @@ const LogToday = ({ saveLog, todayLog }) => {
       date: dayjs().format('YYYY-MM-DD'),
       flow,
       moods,
-      symptoms,
       water,
       sleep,
       notes,
@@ -151,30 +141,16 @@ const LogToday = ({ saveLog, todayLog }) => {
       {/* Symptoms */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-          ⚡ {t('symptoms')} <Text style={[styles.hint, { color: colors.textSecondary }]}>{t('select_all')}</Text>
+          ⚡ {t('symptoms')}
         </Text>
-        <View style={styles.tagGrid}>
-          {symptomOptions.map(option => (
-            <TouchableOpacity
-              key={option.id}
-              style={[
-                styles.tagBtn,
-                {
-                  backgroundColor: symptoms.includes(option.id) ? colors.pinkLight : colors.white,
-                  borderColor: symptoms.includes(option.id) ? colors.pink : colors.border,
-                },
-              ]}
-              onPress={() => toggleItem(option.id, symptoms, setSymptoms)}
-            >
-              <Text style={[
-                styles.tagText,
-                { color: symptoms.includes(option.id) ? colors.pinkDark : colors.textPrimary }
-              ]}>
-                {option.emoji} {option.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity
+          style={[styles.addSymptomsBtn, { borderColor: colors.pink }]}
+          onPress={() => navigation?.navigate('AddSymptom')}
+        >
+          <Text style={{ color: colors.pink, fontWeight: '600', fontSize: 14 }}>
+            ⚡ {t('add_symptoms')}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Water Intake */}
@@ -290,6 +266,7 @@ const makeStyles = (colors) => StyleSheet.create({
     borderWidth: 1.5,
   },
   tagText: { fontSize: 13, fontWeight: '500' },
+  addSymptomsBtn: { paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', marginTop: 4 },
   waterRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   waterGlass: {
     width: 36,

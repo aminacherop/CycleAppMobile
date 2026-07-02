@@ -38,6 +38,7 @@ import NotificationHistory from './src/screens/NotificationHistory'
 const Tab = createBottomTabNavigator()
 const Stack = createStackNavigator()
 const HomeStack = createStackNavigator()
+const LogStack = createStackNavigator()
 const ProfileStack = createStackNavigator()
 const AnalysisStack = createStackNavigator()
 
@@ -230,10 +231,26 @@ const TabNavigator = ({ appData }) => {
     </Tab.Screen>
     <Tab.Screen name="Log">
       {() => (
-        <LogToday
-          saveLog={appData.saveLog}
-          todayLog={appData.getTodayLog()}
-        />
+        <LogStack.Navigator screenOptions={{ headerShown: false }}>
+          <LogStack.Screen name="LogMain">
+            {({ navigation }) => (
+              <LogToday
+                saveLog={appData.saveLog}
+                todayLog={appData.getTodayLog()}
+                navigation={navigation}
+              />
+            )}
+          </LogStack.Screen>
+          <LogStack.Screen name="AddSymptom">
+            {({ navigation }) => (
+              <AddSymptom
+                navigation={navigation}
+                dailyLogs={appData.dailyLogs}
+                saveLog={appData.saveLog}
+              />
+            )}
+          </LogStack.Screen>
+        </LogStack.Navigator>
       )}
     </Tab.Screen>
     <Tab.Screen name="Analysis">

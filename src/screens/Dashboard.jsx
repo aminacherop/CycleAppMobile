@@ -492,12 +492,18 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, dailyLogs, n
             { icon: '💧', value: todayLog?.water ? `${todayLog.water}/8` : '—', label: t('glasses_water') },
             { icon: '😴', value: todayLog?.sleep ? `${todayLog.sleep}h` : '—', label: t('sleep') },
             { icon: '😊', value: todayLog?.moods?.length ? `${todayLog.moods.length}` : '—', label: t('mood') },
+            { icon: '⚡', value: todayLog?.symptomsDetailed?.length ? `${todayLog.symptomsDetailed.length}` : '—', label: t('symptoms'), isSymptom: true },
           ].map((stat, i) => (
-            <View key={i} style={[styles.smallStatCard, { backgroundColor: colors.white, borderColor: colors.border }]}>
+            <TouchableOpacity
+              key={i}
+              style={[styles.smallStatCard, { backgroundColor: colors.white, borderColor: colors.border }]}
+              onPress={() => stat.isSymptom ? navigation?.navigate('AddSymptom') : null}
+              activeOpacity={stat.isSymptom ? 0.7 : 1}
+            >
               <Text style={styles.statCardIcon}>{stat.icon}</Text>
               <Text style={[styles.smallStatValue, { color: colors.textPrimary }]}>{stat.value}</Text>
               <Text style={[styles.smallStatLabel, { color: colors.textSecondary }]}>{stat.label}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       </View>
