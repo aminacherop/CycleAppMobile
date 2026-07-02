@@ -12,12 +12,10 @@ import {
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
-import { usePremium } from '../context/PremiumContext'
 
 const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile, resetAllData, navigation }) => {
     const { colors, isDark, changeTheme, theme } = useTheme()
     const { language, changeLanguage, t } = useLanguage()
-    const { isPremium, subscription, cancelPremium } = usePremium()
 
     const [activeTab, setActiveTab] = useState('profile')
     const [isEditing, setIsEditing] = useState(false)
@@ -306,33 +304,7 @@ const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile,
             {activeTab === 'settings' && (
                 <View style={{ gap: 12 }}>
 
-                    {/* Premium Status */}
-                    <View style={[styles.card, {
-                        backgroundColor: isPremium ? colors.pinkLight : colors.white,
-                        borderColor: isPremium ? colors.pink : colors.border,
-                    }]}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                            <Text style={{ fontSize: 28 }}>{isPremium ? '👑' : '⭐'}</Text>
-                            <View style={{ flex: 1 }}>
-                                <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-                                    {isPremium ? 'Premium Active' : 'Free Plan'}
-                                </Text>
-                                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                                    {isPremium && subscription
-                                        ? `${subscription.plan} plan · expires ${dayjs(subscription.expiresAt).format('MMM D, YYYY')}`
-                                        : 'Upgrade to unlock premium features'}
-                                </Text>
-                            </View>
-                        </View>
-                        {isPremium && (
-                            <TouchableOpacity
-                                style={{ marginTop: 12, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#EF4444', alignItems: 'center' }}
-                                onPress={cancelPremium}
-                            >
-                                <Text style={{ color: '#EF4444', fontWeight: '600', fontSize: 13 }}>Cancel Premium</Text>
-                            </TouchableOpacity>
-                        )}
-                    </View>
+
 
 
                     {/* Language */}
@@ -425,17 +397,7 @@ const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile,
                             <Text style={{ color: colors.textSecondary }}>→</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity
-                            activeOpacity={0.6}
-                            style={[styles.navItem, { borderBottomColor: colors.border }]}
-                            onPress={() => {
-                                navigation.navigate('PartnerInvite')
-                            }}
-                        >
-                            <Text style={{ fontSize: 18 }}>👫</Text>
-                            <Text style={[styles.navItemLabel, { color: colors.textPrimary }]}>{t('partner_sharing')}</Text>
-                            <Text style={{ color: colors.textSecondary }}>→</Text>
-                        </TouchableOpacity>
+
 
                         <TouchableOpacity
                             activeOpacity={0.6}

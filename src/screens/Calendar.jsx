@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Animated,
 } from 'react-native'
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
@@ -15,12 +16,18 @@ import { SYMPTOM_CATEGORIES, getSymptomLabel as getLabel } from '../utils/sympto
 const { width } = Dimensions.get('window')
 const DAY_SIZE = (width - 32 - 12) / 7
 
-const Calendar = ({ cycleSettings, setCycleSettings, dailyLogs, navigation }) => {
+const Calendar = ({ cycleSettings, setCycleSettings, dailyLogs, navigation, route }) => {
   const { colors } = useTheme()
   const { t, language } = useLanguage()
-  const [currentMonth, setCurrentMonth] = useState(dayjs())
+  const initialDate = route?.params?.initialDate
+  const [currentMonth, setCurrentMonth] = useState(initialDate ? dayjs(initialDate) : dayjs())
   const [selectedDay, setSelectedDay] = useState(null)
   const [viewMode, setViewMode] = useState('cycle')
+  const [slideDirection, setSlideDirection] = useState(1) // 1 = forward, -1 = back
+  const slideAnim = useRef(new Animated.Value(0)).current
+  const detailSlide = useRef(new Animated.Value(300)).current
+  const detailOpacity = useRef(new Animated.Value(0)).current
+  const selectedScale = useRef(new Animated.Value(1)).current
 
   const cycleLength = cycleSettings?.cycleLength || 28
   const periodLength = cycleSettings?.periodLength || 5
@@ -186,7 +193,16 @@ const Calendar = ({ cycleSettings, setCycleSettings, dailyLogs, navigation }) =>
       <View style={styles.monthNav}>
         <TouchableOpacity
           style={[styles.monthBtn, { backgroundColor: colors.white, borderColor: colors.border }]}
-          onPress={() => { setCurrentMonth(p => p.subtract(1, 'month')); setSelectedDay(null) }}
+          onPress={() => {
+            setSlideDirection(-1)
+            Animated.sequence([
+              Animated.timing(slideAnim, { toValue: width * 0.3, duration: 150, useNativeDriver: true }),
+              Animated.timing(slideAnim, { toValue: -width * 0.3, duration: 0, useNativeDriver: true }),
+              Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+            ]).start()
+            setCurrentMonth(p => p.subtract(1, 'month'))
+            setSelectedDay(null)
+          }}
         >
           <Text style={{ fontSize: 18, color: colors.textPrimary }}>‹</Text>
         </TouchableOpacity>
@@ -195,7 +211,16 @@ const Calendar = ({ cycleSettings, setCycleSettings, dailyLogs, navigation }) =>
         </Text>
         <TouchableOpacity
           style={[styles.monthBtn, { backgroundColor: colors.white, borderColor: colors.border }]}
-          onPress={() => { setCurrentMonth(p => p.add(1, 'month')); setSelectedDay(null) }}
+          onPress={() => {
+            setSlideDirection(1)
+            Animated.sequence([
+              Animated.timing(slideAnim, { toValue: -width * 0.3, duration: 150, useNativeDriver: true }),
+              Animated.timing(slideAnim, { toValue: width * 0.3, duration: 0, useNativeDriver: true }),
+              Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+            ]).start()
+            setCurrentMonth(p => p.add(1, 'month'))
+            setSelectedDay(null)
+          }}
         >
           <Text style={{ fontSize: 18, color: colors.textPrimary }}>›</Text>
         </TouchableOpacity>
@@ -211,7 +236,7 @@ const Calendar = ({ cycleSettings, setCycleSettings, dailyLogs, navigation }) =>
       </View>
 
       {/* Calendar grid */}
-      <View style={styles.grid}>
+      <Animated.View style={[styles.grid, { transform: [{ translateX: slideAnim }] }]}>
         {[...Array(startDayOfWeek)].map((_, i) => (
           <View key={`empty-${i}`} style={{ width: DAY_SIZE, height: DAY_SIZE }} />
         ))}
@@ -249,13 +274,19 @@ const Calendar = ({ cycleSettings, setCycleSettings, dailyLogs, navigation }) =>
                   borderColor: isToday ? colors.pink : colors.textPrimary,
                 },
               ]}
-              onPress={() => setSelectedDay(day)}
+              onPress={() => {
+                setSelectedDay(day)
+                Animated.sequence([
+                  Animated.spring(selectedScale, { toValue: 1.25, tension: 200, friction: 5, useNativeDriver: true }),
+                  Animated.spring(selectedScale, { toValue: 1, tension: 100, friction: 6, useNativeDriver: true }),
+                ]).start()
+              }}
             >
               <Text style={[styles.dayNum, { color: textColor }]}>{day}</Text>
             </TouchableOpacity>
           )
         })}
-      </View>
+      </Animated.View>
 
       {/* Legend */}
       {viewMode === 'cycle' && (

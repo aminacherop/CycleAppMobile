@@ -7,7 +7,6 @@ import {
   StyleSheet,
 } from 'react-native'
 import dayjs from 'dayjs'
-import { usePremium } from '../context/PremiumContext'
 import { generateAndShareReport } from '../utils/healthReport'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
@@ -15,7 +14,6 @@ import { useLanguage } from '../context/LanguageContext'
 const MyCycles = ({ cycleSettings, dailyLogs, userProfile, installDate, navigation }) => {
   const { colors } = useTheme()
   const { t } = useLanguage()
-  const { isPremium } = usePremium()
   const [filter, setFilter] = useState('all')
   const [exporting, setExporting] = useState(false)
 
@@ -68,10 +66,6 @@ const MyCycles = ({ cycleSettings, dailyLogs, userProfile, installDate, navigati
 
 
   const handleExportReport = async () => {
-    if (!isPremium) {
-      navigation.navigate('Paywall', { feature: 'Health report export' })
-      return
-    }
     setExporting(true)
     await generateAndShareReport({
       userProfile,
@@ -135,7 +129,7 @@ const MyCycles = ({ cycleSettings, dailyLogs, userProfile, installDate, navigati
           onPress={handleExportReport}
           disabled={exporting}
         >
-          <Text style={{ fontSize: 16 }}>{isPremium ? '📄' : '🔒'}</Text>
+          <Text style={{ fontSize: 16 }}>'📄'</Text>
           <Text style={[styles.exportBtnText, { color: colors.pinkDark }]}>
             {exporting ? 'Generating PDF...' : 'Export Health Report'}
           </Text>

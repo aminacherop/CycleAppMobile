@@ -13,7 +13,6 @@ SplashScreen.preventAutoHideAsync().catch(() => {})
 const navigationRef = createNavigationContainerRef()
 import { ThemeProvider } from './src/context/ThemeContext'
 import { LanguageProvider } from './src/context/LanguageContext'
-import { PremiumProvider } from './src/context/PremiumContext'
 import useAppData from './src/hooks/useAppData'
 import AnimatedSplash from './src/components/AnimatedSplash'
 import Onboarding from './src/screens/Onboarding'
@@ -24,16 +23,15 @@ import AddSymptom from './src/screens/AddSymptom'
 import PregnancyIntro from './src/screens/PregnancyIntro'
 import PregnancyMode from './src/screens/PregnancyMode'
 import GestationDatePicker from './src/screens/GestationDatePicker'
+import GoalSelector from './src/screens/GoalSelector'
 import Calendar from './src/screens/Calendar'
 import LogToday from './src/screens/LogToday'
 import Analysis from './src/screens/Analysis'
 import MyCycles from './src/screens/MyCycles'
 import Timeline from './src/screens/Timeline'
-import Paywall from './src/screens/Paywall'
 import Profile from './src/screens/Profile'
 import Articles from './src/screens/Articles'
 import Medications from './src/screens/Medications'
-import PartnerInvite from './src/screens/PartnerInvite'
 import NotificationSettings from './src/screens/NotificationSettings'
 import NotificationHistory from './src/screens/NotificationHistory'
 
@@ -61,6 +59,7 @@ const HomeStackNavigator = ({ appData }) => (
           userProfile={appData.userProfile}
           todayLog={appData.getTodayLog()}
           saveLog={appData.saveLog}
+          dailyLogs={appData.dailyLogs}
           navigation={navigation}
         />
       )}
@@ -97,11 +96,7 @@ const HomeStackNavigator = ({ appData }) => (
     <HomeStack.Screen name="Medications">
       {({ navigation }) => <Medications navigation={navigation} />}
     </HomeStack.Screen>
-    <HomeStack.Screen name="PartnerInvite">
-      {({ navigation }) => (
-        <PartnerInvite navigation={navigation} cycleSettings={appData.cycleSettings} userProfile={appData.userProfile} />
-      )}
-    </HomeStack.Screen>
+
     <HomeStack.Screen name="NotificationSettings">
       {({ navigation }) => (
         <NotificationSettings navigation={navigation} cycleSettings={appData.cycleSettings} />
@@ -136,11 +131,7 @@ const ProfileStackNavigator = ({ appData }) => (
     <ProfileStack.Screen name="Medications">
       {({ navigation }) => <Medications navigation={navigation} />}
     </ProfileStack.Screen>
-    <ProfileStack.Screen name="PartnerInvite">
-      {({ navigation }) => (
-        <PartnerInvite navigation={navigation} cycleSettings={appData.cycleSettings} userProfile={appData.userProfile} />
-      )}
-    </ProfileStack.Screen>
+
     <ProfileStack.Screen name="NotificationSettings">
       {({ navigation }) => (
         <NotificationSettings navigation={navigation} cycleSettings={appData.cycleSettings} />
@@ -183,15 +174,7 @@ const AnalysisStackNavigator = ({ appData }) => (
         />
       )}
     </AnalysisStack.Screen>
-    <AnalysisStack.Screen name="Paywall">
-      {({ route, navigation }) => (
-        <Paywall
-          visible={true}
-          feature={route?.params?.feature}
-          onClose={() => navigation.goBack()}
-        />
-      )}
-    </AnalysisStack.Screen>
+
     <AnalysisStack.Screen name="PregnancyIntro">
       {({ navigation }) => <PregnancyIntro navigation={navigation} />}
     </AnalysisStack.Screen>
@@ -201,6 +184,11 @@ const AnalysisStackNavigator = ({ appData }) => (
     <AnalysisStack.Screen name="GestationDatePicker">
       {({ route, navigation }) => (
         <GestationDatePicker route={route} navigation={navigation} />
+      )}
+    </AnalysisStack.Screen>
+    <AnalysisStack.Screen name="GoalSelector">
+      {({ route, navigation }) => (
+        <GoalSelector route={route} navigation={navigation} />
       )}
     </AnalysisStack.Screen>
   </AnalysisStack.Navigator>
@@ -230,12 +218,13 @@ const TabNavigator = ({ appData }) => {
       {() => <HomeStackNavigator appData={appData} />}
     </Tab.Screen>
     <Tab.Screen name="Calendar">
-      {({ navigation }) => (
+      {({ navigation, route }) => (
         <Calendar
           cycleSettings={appData.cycleSettings}
           dailyLogs={appData.dailyLogs}
           setCycleSettings={appData.updateCycleSettings}
           navigation={navigation}
+          route={route}
         />
       )}
     </Tab.Screen>
@@ -325,11 +314,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <PremiumProvider>
           <LanguageProvider>
             <AppContent />
           </LanguageProvider>
-        </PremiumProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   )

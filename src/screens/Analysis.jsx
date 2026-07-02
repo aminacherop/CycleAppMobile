@@ -15,8 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import { saveData, loadData } from '../utils/storage'
-import { usePremium } from '../context/PremiumContext'
-import Paywall from './Paywall'
+import { getSymptomCorrelations, getCycleRegularitySummary } from '../utils/insightEngine'
 import {
   requestNotificationPermission,
   getNotificationPermission,
@@ -41,8 +40,6 @@ const DEFAULT_REMINDERS = {
 const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, navigation }) => {
   const { colors } = useTheme()
   const { t } = useLanguage()
-  const { isPremium } = usePremium()
-  const [showPaywall, setShowPaywall] = useState(false)
 
   const [goal, setGoal] = useState('track_period')
   const [trackPregnancy, setTrackPregnancy] = useState(false)
@@ -290,7 +287,13 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
     { id: 'track_period', label: t('goal_track_period') },
     { id: 'conceive', label: t('goal_conceive') },
     { id: 'pregnancy', label: t('goal_pregnancy') },
+    { id: 'wellbeing', label: t('goal_wellbeing') },
   ]
+
+  const symptomInsights = getSymptomCorrelations(dailyLogs, cycleSettings)
+  const regularitySummary = getCycleRegularitySummary(dailyLogs, cycleSettings)
+
+  const phaseColors = { Menstrual: '#EC4899', Follicular: '#7C3AED', Ovulation: '#F59E0B', Luteal: '#10B981' }
 
   const reminderOptions = [
     { key: 'periodStarts', emoji: '🩸', label: t('period_starts') },
@@ -335,16 +338,8 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
           </View>
           <Text style={[styles.iconLabel, { color: colors.textSecondary }]}>Reminders</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.iconBtnWrap} onPress={() => setShowPaywall(true)}>
-          <View style={[styles.iconCircle, { backgroundColor: isPremium ? '#FEF3C7' : colors.pinkLight }]}>
-            <Text style={{ fontSize: 22 }}>👑</Text>
-          </View>
-          <Text style={[styles.iconLabel, { color: colors.textSecondary }]}>
-            {isPremium ? t('premium') : t('upgrade')}
-          </Text>
-        </TouchableOpacity>
       </View>
+
       {(!dailyLogs || Object.keys(dailyLogs).length === 0) && (
         <View style={[styles.hintBanner, { backgroundColor: colors.pinkLight, borderColor: colors.pink }]}>
           <Text style={{ fontSize: 18 }}>💡</Text>
@@ -356,35 +351,21 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
 
       {/* ── GOAL CARD ── */}
       <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.border }]}>
-        <View style={styles.cardTitleRow}>
-          <Text style={{ fontSize: 18 }}>🎯</Text>
-          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{t('my_goal')}</Text>
+        <View style={[styles.cardTitleRow, { justifyContent: 'space-between' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ fontSize: 18 }}>🎯</Text>
+            <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{t('my_goal')}</Text>
+          </View>
+          <TouchableOpacity onPress={() => navigation?.navigate('GoalSelector', { currentGoal: goal })}>
+            <Text style={{ fontSize: 16, color: colors.textSecondary }}>→</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {goalOptions.map(option => (
-              <TouchableOpacity
-                key={option.id}
-                style={[
-                  styles.goalChip,
-                  {
-                    backgroundColor: goal === option.id ? colors.pink : colors.pinkLight,
-                  },
-                ]}
-                onPress={() => handleSelectGoal(option.id)}
-              >
-                <Text style={{
-                  color: goal === option.id ? 'white' : colors.pinkDark,
-                  fontWeight: goal === option.id ? '700' : '500',
-                  fontSize: 13,
-                }}>
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+        <View style={{ paddingVertical: 8 }}>
+          <Text style={{ color: colors.pink, fontSize: 14, fontWeight: '600' }}>
+            {goalOptions.find(o => o.id === goal)?.label || goal}
+          </Text>
+        </View>
 
         {goal === 'pregnancy' ? (
           <>
@@ -455,6 +436,106 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
         )}
       </View>
 
+
+      {/* CYCLE REGULARITY CARD */}
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: colors.white, borderColor: colors.border }]}
+        onPress={() => navigation?.navigate('MyCycles')}
+        activeOpacity={0.8}
+      >
+        <View style={styles.cardTitleRow}>
+          <Text style={{ fontSize: 18 }}>📊</Text>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{t('cycle_regularity')}</Text>
+        </View>
+        {regularitySummary ? (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <View style={{
+                width: 72, height: 72, borderRadius: 36,
+                backgroundColor: regularitySummary.color + '20',
+                borderWidth: 3, borderColor: regularitySummary.color,
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: regularitySummary.color }}>
+                  {regularitySummary.score}
+                </Text>
+                <Text style={{ fontSize: 9, color: regularitySummary.color, fontWeight: '600' }}>/ 100</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: regularitySummary.color, marginBottom: 4 }}>
+                  {regularitySummary.label}
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+                  {regularitySummary.cyclesAnalyzed} {t('cycles_analyzed')}
+                </Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={[styles.statTag, { backgroundColor: colors.pinkLight, flex: 1 }]}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }}>{t('avg_cycle_length')}</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.pink }}>{regularitySummary.avg}d</Text>
+              </View>
+              <View style={[styles.statTag, { backgroundColor: '#D1FAE5', flex: 1 }]}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }}>{t('shortest')}</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#10B981' }}>{regularitySummary.min}d</Text>
+              </View>
+              <View style={[styles.statTag, { backgroundColor: '#FEF3C7', flex: 1 }]}>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }}>{t('longest')}</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#F59E0B' }}>{regularitySummary.max}d</Text>
+              </View>
+            </View>
+          </>
+        ) : (
+          <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>
+            {t('not_enough_data')}
+          </Text>
+        )}
+      </TouchableOpacity>
+
+      {/* SYMPTOM INSIGHTS CARD */}
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: colors.white, borderColor: colors.border }]}
+        onPress={() => navigation?.navigate('Timeline')}
+        activeOpacity={0.8}
+      >
+        <View style={styles.cardTitleRow}>
+          <Text style={{ fontSize: 18 }}>🔍</Text>
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{t('symptom_correlation_title')}</Text>
+        </View>
+        {symptomInsights.length > 0 ? (
+          <View style={{ gap: 10 }}>
+            {symptomInsights.map((insight, i) => (
+              <View key={i} style={{
+                flexDirection: 'row', alignItems: 'center', gap: 10,
+                backgroundColor: (phaseColors[insight.phase] || colors.pink) + '12',
+                borderRadius: 12, padding: 10,
+              }}>
+                <View style={{
+                  width: 44, height: 44, borderRadius: 22,
+                  backgroundColor: (phaseColors[insight.phase] || colors.pink) + '25',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Text style={{ fontSize: 18, fontWeight: '800', color: phaseColors[insight.phase] || colors.pink }}>
+                    {insight.frequency}%
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textPrimary }}>
+                    {insight.symptom}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>
+                    {insight.frequency}% {t('of_the_time_in')} {insight.phase} {t('phase_label')}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>
+            {t('symptom_correlation_empty')}
+          </Text>
+        )}
+      </TouchableOpacity>
       {/* ── MY CYCLES CARD ── */}
       <TouchableOpacity
         style={[styles.card, { backgroundColor: colors.white, borderColor: colors.border }]}
@@ -689,11 +770,6 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
         </View>
       </Modal>
 
-      <Paywall
-        visible={showPaywall}
-        feature="Premium features"
-        onClose={() => setShowPaywall(false)}
-      />
 
     </ScrollView>
   )

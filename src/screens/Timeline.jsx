@@ -41,6 +41,26 @@ const Timeline = ({ cycleSettings, dailyLogs, navigation }) => {
         if (log.periodStatus === 'ended') {
           events.push({ date, label: t('period_ends'), color: colors.pink })
         }
+        const allSymptoms = [
+          ...(log.symptoms || []),
+          ...(log.symptomsDetailed || []),
+        ]
+        if (allSymptoms.length > 0) {
+          events.push({
+            date,
+            label: `${t('symptoms')}:`,
+            desc: allSymptoms.map(s => `+ ${s}`).join('\n'),
+            color: '#7C3AED',
+          })
+        }
+        if (log.moods && log.moods.length > 0) {
+          events.push({
+            date,
+            label: `${t('mood')}:`,
+            desc: log.moods.map(m => t(`mood_${m}`)).join(', '),
+            color: '#F59E0B',
+          })
+        }
       })
     }
 
@@ -108,18 +128,28 @@ const Timeline = ({ cycleSettings, dailyLogs, navigation }) => {
           {events.map((event, i) => {
             const d = dayjs(event.date)
             return (
-              <View key={i} style={[styles.eventCard, { backgroundColor: colors.white, borderColor: colors.border }]}>
+              <TouchableOpacity
+                key={i}
+                style={[styles.eventCard, { backgroundColor: colors.white, borderColor: colors.border }]}
+                onPress={() => navigation?.getParent()?.navigate('Calendar', { initialDate: event.date })}
+                activeOpacity={0.7}
+              >
                 <View style={[styles.dateBlock, { backgroundColor: event.color }]}>
                   <Text style={styles.dateDay}>{d.format('ddd')}</Text>
                   <Text style={styles.dateNum}>{d.format('DD')}</Text>
                   <Text style={styles.dateMonth}>{d.format('MMM')}</Text>
                 </View>
                 <View style={styles.eventContent}>
-                  <Text style={[styles.eventLabel, { color: colors.textPrimary }]}>
+                  <Text style={[styles.eventLabel, { color: event.color }]}>
                     {event.label}
                   </Text>
+                  {event.desc && (
+                    <Text style={[styles.eventDesc, { color: colors.textSecondary }]}>
+                      {event.desc}
+                    </Text>
+                  )}
                 </View>
-              </View>
+              </TouchableOpacity>
             )
           })}
         </View>
@@ -164,6 +194,7 @@ const makeStyles = (colors) => StyleSheet.create({
   dateMonth: { color: 'white', fontSize: 14, fontWeight: '700', marginTop: 2 },
   eventContent: { flex: 1, justifyContent: 'center', paddingHorizontal: 18 },
   eventLabel: { fontSize: 16, fontWeight: '600' },
+  eventDesc: { fontSize: 13, marginTop: 4, lineHeight: 20 },
 })
 
 export default Timeline

@@ -10,19 +10,54 @@ import {
 } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import Svg, { Circle } from 'react-native-svg'
+const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import { getUnreadNotificationCount } from '../utils/notifications'
+import { getSmartPredictions } from '../utils/cyclePrediction'
+import { getDailyInsight } from '../utils/dailyInsights'
 
-const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, navigation }) => {
+const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, dailyLogs, navigation }) => {
   const { colors, isDark, changeTheme } = useTheme()
   const [unreadCount, setUnreadCount] = useState(0)
   const welcomeOpacity = useRef(new Animated.Value(0)).current
   const welcomeTranslateY = useRef(new Animated.Value(-16)).current
+  const ringProgress = useRef(new Animated.Value(0)).current
+  const countScale = useRef(new Animated.Value(0.7)).current
+  const pulseAnim = useRef(new Animated.Value(1)).current
+  const [displayedName, setDisplayedName] = useState('')
+  const nameOpacity = useRef(new Animated.Value(0)).current
+  const nameTranslateY = useRef(new Animated.Value(10)).current
 
   useEffect(() => {
+    // Typewriter name animation
+    if (name) {
+      let i = 0
+      const interval = setInterval(() => {
+        i++
+        setDisplayedName(name.slice(0, i))
+        if (i >= name.length) {
+          clearInterval(interval)
+          Animated.parallel([
+            Animated.timing(nameOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+            Animated.spring(nameTranslateY, { toValue: 0, tension: 80, friction: 8, useNativeDriver: true }),
+          ]).start()
+        }
+      }, 80)
+    }
+
+    // Pulse animation loop
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.04, duration: 1200, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+      ])
+    ).start()
+
     Animated.parallel([
+      Animated.timing(ringProgress, { toValue: 1, duration: 1400, delay: 200, useNativeDriver: false }),
+      Animated.spring(countScale, { toValue: 1, tension: 60, friction: 8, delay: 400, useNativeDriver: true }),
       Animated.timing(welcomeOpacity, {
         toValue: 1,
         duration: 500,
@@ -62,10 +97,12 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, navigation }
 
   const { t, language, changeLanguage } = useLanguage()
   const [selectedMood, setSelectedMood] = useState(null)
+  const [tipOffset, setTipOffset] = useState(0)
 
   const name = userProfile?.name || ''
 
-  const cycleLength = cycleSettings?.cycleLength || 28
+  const smartPrediction = getSmartPredictions(dailyLogs, cycleSettings)
+  const cycleLength = smartPrediction.effectiveCycleLength
   const periodLength = cycleSettings?.periodLength || 5
   const rawLutealLength = cycleSettings?.lutealLength || 14
   const lastPeriodStart = cycleSettings?.lastPeriodStart ||
@@ -122,15 +159,16 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, navigation }
   }
 
   const phase = phaseInfo[currentPhase]
+  const dailyInsight = getDailyInsight(currentPhase, tipOffset)
   const progress = Math.min(100, (currentCycleDay / cycleLength) * 100)
 
   const moods = [
-    { id: 'good', label: t('mood_good') || 'Good', emoji: '😊' },
-    { id: 'tired', label: t('mood_tired') || 'Tired', emoji: '😴' },
-    { id: 'cramps', label: t('mood_cramps') || 'Cramps', emoji: '😣' },
-    { id: 'moody', label: t('mood_moody') || 'Moody', emoji: '😤' },
-    { id: 'nausea', label: t('mood_nausea') || 'Nausea', emoji: '🤢' },
-    { id: 'energetic', label: t('mood_energetic') || 'Energetic', emoji: '💪' },
+    { id: 'good', label: t('mood_good'), emoji: '😊' },
+    { id: 'tired', label: t('mood_tired'), emoji: '😴' },
+    { id: 'cramps', label: t('mood_cramps'), emoji: '😣' },
+    { id: 'moody', label: t('mood_moody'), emoji: '😤' },
+    { id: 'nausea', label: t('mood_nausea'), emoji: '🤢' },
+    { id: 'energetic', label: t('mood_energetic'), emoji: '💪' },
   ]
 
   // Ring calculations
@@ -146,7 +184,7 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, navigation }
       bg: colors.background,
     },
     {
-      label: 'Next Period',
+      label: t('next_period'),
       date: nextPeriodDate.format('MMM D'),
       icon: '💧',
       bg: '#FCE7F3',
@@ -154,7 +192,7 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, navigation }
       goToCalendar: true,
     },
     {
-      label: 'Next Fertile',
+      label: t('fertile_window'),
       date: fertileStart.format('MMM D'),
       icon: '🌱',
       bg: '#FEF3C7',
@@ -162,20 +200,12 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, navigation }
       goToCalendar: true,
     },
     {
-      label: 'Next Ovulation',
+      label: t('ovulation'),
       date: ovulationDate.format('MMM D'),
       icon: '✨',
       bg: '#EDE9FE',
       iconBg: '#7C3AED',
       goToCalendar: true,
-    },
-    {
-      label: 'Partner Mode',
-      sub: 'Share your cycle',
-      icon: '👫',
-      bg: '#D1FAE5',
-      iconBg: '#10B981',
-      isAction: true,
     },
   ]
 
@@ -193,10 +223,13 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, navigation }
         </TouchableOpacity>
         <View style={styles.topBarRight}>
           <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: colors.white, borderColor: colors.border }]}
+            style={[styles.iconBtn, { backgroundColor: colors.white, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 10 }]}
             onPress={() => changeLanguage(language === 'en' ? 'sw' : 'en')}
           >
-            <Text style={{ fontSize: 16 }}>{language === 'en' ? '🇰🇪' : '🇬🇧'}</Text>
+            <Text style={{ fontSize: 12 }}>🌍</Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.pink }}>
+              {language === 'en' ? 'EN' : 'SW'}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconBtn, { backgroundColor: colors.white, borderColor: colors.border }]}
@@ -230,18 +263,92 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, navigation }
           },
         ]}
       >
-        <Text style={[styles.greetingText, { color: colors.textSecondary }]}>
-          {name ? `Hi, ${name} 👋` : 'Period'}
-        </Text>
-        <Text style={[styles.countdownLabel, { color: colors.textSecondary }]}>
-          {currentPhase === 'Menstrual' ? 'Period' : 'Period'}
-        </Text>
-        <Text style={[styles.countdownBig, { color: colors.textPrimary }]}>
-          {daysUntilPeriod === 0 ? 'TODAY' : `${daysUntilPeriod} DAYS LEFT`}
-        </Text>
-        <Text style={[styles.countdownSub, { color: colors.textSecondary }]}>
-          {lpsDate.format('MMM D')} - Next Period {nextPeriodDate.format('MMM D')}
-        </Text>
+        {/* Greeting */}
+        <View style={{ alignItems: 'center', marginBottom: 12 }}>
+          <Animated.Text style={[
+            styles.greetingText,
+            {
+              color: colors.textPrimary,
+              fontSize: 24,
+              fontWeight: '800',
+              opacity: name ? nameOpacity : welcomeOpacity,
+              transform: [{ translateY: name ? nameTranslateY : welcomeTranslateY }],
+            }
+          ]}>
+            {name ? `Hi, ${displayedName || ''}${displayedName.length < name.length ? '|' : ' 👋'}` : '👋'}
+          </Animated.Text>
+          <Animated.Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2, opacity: welcomeOpacity }}>
+            {phase.emoji} {currentPhase} phase · Day {currentCycleDay}
+          </Animated.Text>
+        </View>
+
+        {/* Large animated ring card */}
+        <Animated.View style={[
+          styles.heroCard,
+          { backgroundColor: phase.bg, transform: [{ scale: pulseAnim }] }
+        ]}>
+          {/* SVG Ring */}
+          <View style={styles.heroRingWrap}>
+            {(() => {
+              const R = 90
+              const circ = 2 * Math.PI * R
+              const cycleProgress = Math.min(1, currentCycleDay / cycleLength)
+              const animatedDash = ringProgress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, cycleProgress * circ],
+              })
+              return (
+                <Svg width={220} height={220} style={{ position: 'absolute' }}>
+                  {/* Background track */}
+                  <Circle
+                    cx="110" cy="110" r={R}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.3)"
+                    strokeWidth={14}
+                  />
+                  {/* Animated progress arc */}
+                  <AnimatedCircle
+                    cx="110" cy="110" r={R}
+                    fill="none"
+                    stroke={phase.color}
+                    strokeWidth={14}
+                    strokeLinecap="round"
+                    strokeDasharray={circ}
+                    strokeDashoffset={animatedDash.interpolate
+                      ? animatedDash.interpolate({ inputRange: [0, circ], outputRange: [circ, 0] })
+                      : circ - cycleProgress * circ
+                    }
+                    rotation="-90"
+                    origin="110, 110"
+                  />
+                </Svg>
+              )
+            })()}
+
+            {/* Center content */}
+            <Animated.View style={[styles.heroCenter, { transform: [{ scale: countScale }] }]}>
+              <Text style={[styles.heroDaysNum, { color: phase.color }]}>
+                {daysUntilPeriod === 0 ? '🌸' : daysUntilPeriod}
+              </Text>
+              <Text style={[styles.heroDaysLabel, { color: colors.textSecondary }]}>
+                {daysUntilPeriod === 0 ? t('today') : t('days_left') || 'days left'}
+              </Text>
+              <Text style={[styles.heroPhaseLabel, { color: phase.color }]}>
+                {phase.emoji} {currentPhase}
+              </Text>
+            </Animated.View>
+          </View>
+
+          {/* Date subtitle */}
+          <Text style={[styles.countdownSub, { color: colors.textSecondary, marginBottom: 4 }]}>
+            {lpsDate.format('MMM D')} → {nextPeriodDate.format('MMM D')}
+          </Text>
+        </Animated.View>
+        {smartPrediction.source === 'learned' && (
+          <Text style={{ fontSize: 11, color: colors.pink, fontWeight: '600', textAlign: 'center', marginTop: -10, marginBottom: 14 }}>
+            {t('learned_from_cycles', { count: smartPrediction.cyclesAnalyzed })}
+          </Text>
+        )}
 
         <TouchableOpacity
           style={[styles.periodStartBtn, { backgroundColor: colors.pink }]}
@@ -264,7 +371,6 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, navigation }
             activeOpacity={(card.isAction || card.goToCalendar || card.ring) ? 0.7 : 1}
             style={[styles.statCard, { backgroundColor: card.bg }]}
             onPress={() => {
-              if (card.isAction) navigation?.navigate('PartnerInvite')
               if (card.goToCalendar) navigation?.getParent()?.navigate('Calendar')
               if (card.ring) navigation?.navigate('CycleDayDetail')
             }}
@@ -401,27 +507,33 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, navigation }
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
           {t('tip_for_phase')}
         </Text>
-        <View style={[styles.tipCard, { backgroundColor: colors.white, borderLeftColor: phase.color }]}>
-          <Text style={[styles.tipTitle, { color: phase.color }]}>
-            {phase.emoji} {currentPhase} phase
-          </Text>
+        <TouchableOpacity
+          style={[styles.tipCard, { backgroundColor: colors.white, borderLeftColor: phase.color }]}
+          onPress={() => setTipOffset(prev => prev + 1)}
+          activeOpacity={0.8}
+        >
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <Text style={[styles.tipTitle, { color: phase.color }]}>
+              {phase.emoji} {currentPhase} phase
+            </Text>
+            <Text style={{ fontSize: 16, color: colors.textSecondary }}>↻</Text>
+          </View>
           <Text style={[styles.tipText, { color: colors.textSecondary }]}>
-            {phase.tip}
+            {dailyInsight ? `${dailyInsight.emoji} ${dailyInsight.text}` : phase.tip}
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Quick shortcuts */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-          Quick access
+          {t('quick_access')}
         </Text>
         <View style={styles.shortcutsWrap}>
           {[
-            { icon: '📚', title: 'Health Articles', desc: 'Cycle, PCOS, fertility', screen: 'Articles' },
-            { icon: '💊', title: 'Pills & Supplements', desc: 'Daily reminders', screen: 'Medications' },
-            { icon: '👫', title: 'Partner sharing', desc: 'Share cycle summary', screen: 'PartnerInvite' },
-            { icon: '🔔', title: 'Reminders', desc: 'Period & ovulation alerts', screen: 'Notifications' },
+            { icon: '📚', title: t('health_articles'), desc: t('articles_desc'), screen: 'Articles' },
+            { icon: '💊', title: t('pills_supplements'), desc: t('medications_desc'), screen: 'Medications' },
+            { icon: '🔔', title: t('reminders_label'), desc: t('reminders_desc'), screen: 'Notifications' },
           ].map((s, i) => (
             <TouchableOpacity
               key={i}
@@ -478,6 +590,45 @@ const makeStyles = (colors) => StyleSheet.create({
     justifyContent: 'center',
   },
 
+  heroCard: {
+    borderRadius: 28,
+    padding: 20,
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  heroRingWrap: {
+    width: 220,
+    height: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  heroCenter: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroDaysNum: {
+    fontSize: 56,
+    fontWeight: '900',
+    lineHeight: 62,
+  },
+  heroDaysLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  heroPhaseLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
   countdownWrap: {
     alignItems: 'center',
     marginBottom: 20,
