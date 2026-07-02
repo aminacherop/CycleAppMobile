@@ -7,6 +7,7 @@ import {
   StyleSheet,
   AppState,
   Animated,
+  Modal,
 } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import Svg, { Circle } from 'react-native-svg'
@@ -18,7 +19,7 @@ import { getUnreadNotificationCount } from '../utils/notifications'
 import { getSmartPredictions } from '../utils/cyclePrediction'
 import { getDailyInsight } from '../utils/dailyInsights'
 
-const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, dailyLogs, navigation }) => {
+const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userProfile, todayLog, saveLog, dailyLogs, navigation }) => {
   const { colors, isDark, changeTheme } = useTheme()
   const [unreadCount, setUnreadCount] = useState(0)
   const welcomeOpacity = useRef(new Animated.Value(0)).current
@@ -98,6 +99,8 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, dailyLogs, n
   const { t, language, changeLanguage } = useLanguage()
   const [selectedMood, setSelectedMood] = useState(null)
   const [tipOffset, setTipOffset] = useState(0)
+  const [showPeriodSheet, setShowPeriodSheet] = useState(false)
+  const [showPeriodEndSheet, setShowPeriodEndSheet] = useState(false)
 
   const name = userProfile?.name || ''
 
@@ -127,6 +130,15 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, dailyLogs, n
     nextPeriodDate = nextPeriodDate.add(cycleLength, 'day')
   }
   const daysUntilPeriod = nextPeriodDate.diff(todayDate, 'day')
+
+  // Calculate if period is late (currentCycleDay > cycleLength)
+  const daysLate = currentCycleDay > cycleLength ? currentCycleDay - cycleLength : 0
+
+  // Period ended = was in period window but no longer (day > periodLength)
+  const justEndedPeriod = currentCycleDay === periodLength + 1
+
+  // Has no real data (using default date)
+  const hasNoData = !cycleSettings?.lastPeriodStart
 
   let ovulationDate = lpsDate.add(ovulationDayOfCycle, 'day')
   while (ovulationDate.isBefore(todayDate, 'day')) {
@@ -212,6 +224,7 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, dailyLogs, n
   const styles = makeStyles(colors)
 
   return (
+    <>
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.scrollContent}
@@ -350,12 +363,134 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, dailyLogs, n
           </Text>
         )}
 
-        <TouchableOpacity
-          style={[styles.periodStartBtn, { backgroundColor: colors.pink }]}
-          onPress={() => navigation?.navigate('PeriodPicker')}
-        >
-          <Text style={styles.periodStartBtnText}>Period Starts</Text>
-        </TouchableOpacity>
+        {(() => {
+          const isPeriodActive = currentCycleDay <= periodLength
+          const isComingSoon = daysUntilPeriod <= 3 && daysUntilPeriod > 0
+
+          const logPeriodStart = () => setShowPeriodSheet(true)
+
+          // NO START DATE — late period warning
+          if (hasNoData) {
+            return (
+              <TouchableOpacity
+                style={[styles.periodStartBtn, { backgroundColor: '#EF4444' }]}
+                onPress={logPeriodStart}
+              >
+                <Text style={styles.periodStartBtnText}>
+                  ⚠️ {t('period_late') || 'Period late'} · {t('log_period_start')}
+                </Text>
+              </TouchableOpacity>
+            )
+          }
+
+          // PERIOD ACTIVE — Days 1 to periodLength
+          if (isPeriodActive) {
+            const daysAgo = currentCycleDay - 1
+            const daysAgoText =
+              daysAgo === 0
+                ? t('today')
+                : daysAgo === 1
+                ? (t('yesterday') || 'Yesterday')
+                : daysAgo + ' ' + (t('days_ago_suffix') || 'days ago')
+
+            // Last day of period — offer to confirm ended
+            if (currentCycleDay >= periodLength) {
+              return (
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                  <TouchableOpacity
+                    style={[styles.periodStartBtn, { backgroundColor: '#10B981', flex: 1 }]}
+                    onPress={() => setShowPeriodEndSheet(true)}
+                  >
+                    <Text style={styles.periodStartBtnText}>
+                      {t('period_ended_today') || '✅ Period ended today?'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.periodStartBtn, { backgroundColor: colors.white, borderWidth: 1.5, borderColor: colors.border, flex: 0.5 }]}
+                    onPress={() => navigation?.navigate('PeriodPicker')}
+                  >
+                    <Text style={[styles.periodStartBtnText, { color: colors.textSecondary, fontSize: 13 }]}>
+                      📅 {t('edit_date')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )
+            }
+
+            // Days 1 to periodLength-1 — info only
+            return (
+              <View style={[styles.periodStartBtn, { backgroundColor: colors.pinkLight, borderWidth: 1.5, borderColor: colors.pink }]}>
+                <Text style={[styles.periodStartBtnText, { color: colors.pink }]}>
+                  🩸 {t('period_started') || 'Period started'} {daysAgoText}
+                </Text>
+              </View>
+            )
+          }
+
+          // CYCLE COMPLETE — time to log new period
+          if (currentCycleDay >= cycleLength) {
+            return (
+              <TouchableOpacity
+                style={[styles.periodStartBtn, { backgroundColor: colors.pink }]}
+                onPress={logPeriodStart}
+              >
+                <Text style={styles.periodStartBtnText}>🩸 {t('log_period_start')}</Text>
+              </TouchableOpacity>
+            )
+          }
+
+          // LATE PERIOD — past expected date
+          if (daysLate > 0) {
+            return (
+              <TouchableOpacity
+                style={[styles.periodStartBtn, { backgroundColor: '#EF4444' }]}
+                onPress={logPeriodStart}
+              >
+                <Text style={styles.periodStartBtnText}>
+                  ⚠️ {daysLate}d {t('days_late') || 'days late'} · {t('log_period_start')}
+                </Text>
+              </TouchableOpacity>
+            )
+          }
+
+          // COMING SOON — started early option
+          if (isComingSoon) {
+            return (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                <TouchableOpacity
+                  style={[styles.periodStartBtn, { backgroundColor: colors.pink, flex: 1 }]}
+                  onPress={logPeriodStart}
+                >
+                  <Text style={styles.periodStartBtnText}>🩸 {t('started_early') || 'Started early?'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.periodStartBtn, { backgroundColor: colors.white, borderWidth: 2, borderColor: colors.pink, flex: 0.6 }]}
+                  onPress={() => navigation?.navigate('PeriodPicker')}
+                >
+                  <Text style={[styles.periodStartBtnText, { color: colors.pink }]}>📅 {t('edit_date')}</Text>
+                </TouchableOpacity>
+              </View>
+            )
+          }
+
+          // NORMAL TRACKING — log new period start
+          return (
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+              <TouchableOpacity
+                style={[styles.periodStartBtn, { backgroundColor: colors.pink, flex: 1 }]}
+                onPress={logPeriodStart}
+              >
+                <Text style={styles.periodStartBtnText}>🩸 {t('log_period_start')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.periodStartBtn, { backgroundColor: colors.white, borderWidth: 2, borderColor: colors.pink, flex: 0.6 }]}
+                onPress={() => navigation?.navigate('PeriodPicker')}
+              >
+                <Text style={[styles.periodStartBtnText, { color: colors.pink }]}>📅 {t('edit_date')}</Text>
+              </TouchableOpacity>
+            </View>
+          )
+        })()}
       </Animated.View>
 
       {/* Stat cards row — horizontal scroll */}
@@ -558,6 +693,122 @@ const Dashboard = ({ cycleSettings, userProfile, todayLog, saveLog, dailyLogs, n
       </View>
 
     </ScrollView>
+
+      {/* Period Start Bottom Sheet */}
+      <Modal visible={showPeriodSheet} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowPeriodSheet(false)} />
+          <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 }}>
+              🩸 {t('when_period_start') || 'When did your period start?'}
+            </Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 20 }}>
+              {t('select_start_date') || 'Select the date your period began'}
+            </Text>
+
+            {/* Today */}
+            <TouchableOpacity
+              style={{ backgroundColor: colors.pink, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10 }}
+              onPress={async () => {
+                const today = dayjs().format('YYYY-MM-DD')
+                if (updateCycleSettings) await updateCycleSettings(prev => ({ ...prev, lastPeriodStart: today }))
+                if (saveLog) await saveLog(today, { date: today, flow: 'medium', periodStatus: 'started' })
+                setShowPeriodSheet(false)
+              }}
+            >
+              <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>
+                🩸 {t('today')} — {dayjs().format('MMM D')}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Yesterday */}
+            <TouchableOpacity
+              style={{ backgroundColor: colors.pinkLight, borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10, borderWidth: 1.5, borderColor: colors.pink }}
+              onPress={async () => {
+                const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+                if (updateCycleSettings) await updateCycleSettings(prev => ({ ...prev, lastPeriodStart: yesterday }))
+                if (saveLog) await saveLog(yesterday, { date: yesterday, flow: 'medium', periodStatus: 'started' })
+                setShowPeriodSheet(false)
+              }}
+            >
+              <Text style={{ color: colors.pink, fontWeight: '700', fontSize: 15 }}>
+                📅 {t('yesterday') || 'Yesterday'} — {dayjs().subtract(1, 'day').format('MMM D')}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Pick date */}
+            <TouchableOpacity
+              style={{ backgroundColor: colors.white, borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: colors.border }}
+              onPress={() => {
+                setShowPeriodSheet(false)
+                navigation?.navigate('PeriodPicker')
+              }}
+            >
+              <Text style={{ color: colors.textSecondary, fontWeight: '600', fontSize: 15 }}>
+                🗓 {t('pick_another_date') || 'Pick another date'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{ marginTop: 16, alignItems: 'center' }}
+              onPress={() => setShowPeriodSheet(false)}
+            >
+              <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{t('cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Period END Bottom Sheet */}
+      <Modal visible={showPeriodEndSheet} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowPeriodEndSheet(false)} />
+          <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 }}>
+              ✅ {t('when_period_end') || 'When did your period end?'}
+            </Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 20 }}>
+              {t('select_end_date') || 'Select the date your period ended'}
+            </Text>
+            <TouchableOpacity
+              style={{ backgroundColor: '#10B981', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10 }}
+              onPress={async () => {
+                const today = dayjs().format('YYYY-MM-DD')
+                if (saveLog) await saveLog(today, { date: today, flow: 'none', periodStatus: 'ended' })
+                setShowPeriodEndSheet(false)
+              }}
+            >
+              <Text style={{ color: 'white', fontWeight: '700', fontSize: 15 }}>
+                ✅ {t('today')} — {dayjs().format('MMM D')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ backgroundColor: '#D1FAE5', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 10, borderWidth: 1.5, borderColor: '#10B981' }}
+              onPress={async () => {
+                const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD')
+                if (saveLog) await saveLog(yesterday, { date: yesterday, flow: 'none', periodStatus: 'ended' })
+                setShowPeriodEndSheet(false)
+              }}
+            >
+              <Text style={{ color: '#10B981', fontWeight: '700', fontSize: 15 }}>
+                📅 {t('yesterday') || 'Yesterday'} — {dayjs().subtract(1, 'day').format('MMM D')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ backgroundColor: colors.white, borderRadius: 14, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: colors.border }}
+              onPress={() => { setShowPeriodEndSheet(false); navigation?.navigate('PeriodPicker') }}
+            >
+              <Text style={{ color: colors.textSecondary, fontWeight: '600', fontSize: 15 }}>
+                🗓 {t('pick_another_date') || 'Pick another date'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ marginTop: 16, alignItems: 'center' }} onPress={() => setShowPeriodEndSheet(false)}>
+              <Text style={{ color: colors.textSecondary, fontSize: 14 }}>{t('cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+  </>
   )
 }
 

@@ -57,6 +57,8 @@ const HomeStackNavigator = ({ appData }) => (
       {({ navigation }) => (
         <Dashboard
           cycleSettings={appData.cycleSettings}
+          setCycleSettings={appData.updateCycleSettings}
+          updateCycleSettings={appData.updateCycleSettings}
           userProfile={appData.userProfile}
           todayLog={appData.getTodayLog()}
           saveLog={appData.saveLog}
