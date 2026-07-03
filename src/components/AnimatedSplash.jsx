@@ -66,7 +66,7 @@ const AnimatedSplash = () => {
           },
         ]}
       >
-        CycleApp
+        My Cycle:{'\n'}Period Tracker
       </Animated.Text>
 
       <Animated.Text style={[styles.subtitle, { opacity: subOpacity }]}>

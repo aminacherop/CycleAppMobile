@@ -113,7 +113,7 @@ const Onboarding = ({ onComplete }) => {
           </View>
 
           <Text style={[styles.title, { color: colors.textPrimary }]}>
-            Welcome to{'\n'}CycleApp 🌸
+            Welcome to{'\n'}My Cycle: Period Tracker 🌸
           </Text>
 
           <Text style={[styles.desc, { color: colors.textSecondary }]}>

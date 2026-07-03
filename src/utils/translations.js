@@ -1,7 +1,7 @@
 export const translations = {
   en: {
     // ── GENERAL ──────────────────────────────────
-    app_name: 'CycleApp',
+    app_name: 'My Cycle: Period Tracker',
     save: 'Save',
     weekday_sun: 'Sunday',
     weekday_mon: 'Monday',
@@ -410,7 +410,7 @@ export const translations = {
     days_label: 'days',
     share_with_partner_title: '📱 Share this with your partner:',
     step_share_code: 'Share the code with your partner',
-    step_download: 'Partner downloads CycleApp',
+    step_download: 'Partner downloads My Cycle: Period Tracker',
     step_enter_code: 'Taps "I have a partner code" and enters it',
     step_complete: 'Pairing complete!',
     share_btn: '📤 Share',
@@ -418,7 +418,7 @@ export const translations = {
     copy_code_btn: '📋 Copy code',
     generate_new_code: '🔄 Generate new code',
     enter_partner_code_title: 'Enter partner code',
-    enter_partner_code_desc: 'Ask your partner for their 6-digit CycleApp pairing code.',
+    enter_partner_code_desc: 'Ask your partner for their 6-digit My Cycle: Period Tracker pairing code.',
     pairing_code_label: 'Pairing code',
     checking_dots: 'Checking...',
     pair_with_partner: 'Pair with partner ✓',
@@ -463,7 +463,7 @@ export const translations = {
     share_sms: 'Share via SMS',
 
     // ── ONBOARDING ───────────────────────────────
-    welcome_title: 'Welcome to\nCycleApp 🌸',
+    welcome_title: 'Welcome to\nMy Cycle: Period Tracker 🌸',
     welcome_desc: 'Your personal period tracker for every woman. Private, offline-first, and designed around your body.',
     get_started: 'Get started →',
     go_to_dashboard: 'Go to my dashboard 🏠',
@@ -513,7 +513,7 @@ export const translations = {
     notifications_blocked_status: 'Blocked — enable in phone settings',
     reminders_active_status: 'Active — reminders are scheduled',
     get_reminders_status: 'Get reminders for your cycle',
-    notifications_blocked_desc: '⚠️ Notifications are blocked. Enable them in your phone Settings → Apps → CycleApp → Notifications.',
+    notifications_blocked_desc: '⚠️ Notifications are blocked. Enable them in your phone Settings → Apps → Period Tracker → Notifications.',
     notif_works_closed: "💡 Notifications work even when the app is closed since they are scheduled on your device using your phone's notification system.",
     period_reminder_desc: '2 days before, 1 day before, and on the day',
     ovulation_reminder_desc: 'Day before and on ovulation day',
@@ -524,7 +524,7 @@ export const translations = {
 
   sw: {
     // ── GENERAL ──────────────────────────────────
-    app_name: 'CycleApp',
+    app_name: 'My Cycle: Period Tracker',
     save: 'Hifadhi',
     weekday_sun: 'Jumapili',
     weekday_mon: 'Jumatatu',
@@ -895,7 +895,7 @@ export const translations = {
     days_label: 'siku',
     share_with_partner_title: '📱 Shiriki hii na mwenzi wako:',
     step_share_code: 'Shiriki msimbo na mwenzi wako',
-    step_download: 'Mwenzi anapakua CycleApp',
+    step_download: 'Mwenzi anapakua My Cycle: Period Tracker',
     step_enter_code: 'Anagusa "Nina msimbo wa mwenzi" na kuuingiza',
     step_complete: 'Kuunganisha kumekamilika!',
     share_btn: '📤 Shiriki',
@@ -903,7 +903,7 @@ export const translations = {
     copy_code_btn: '📋 Nakili msimbo',
     generate_new_code: '🔄 Tengeneza msimbo mpya',
     enter_partner_code_title: 'Ingiza msimbo wa mwenzi',
-    enter_partner_code_desc: 'Muulize mwenzi wako msimbo wake wa tarakimu 6 wa CycleApp.',
+    enter_partner_code_desc: 'Muulize mwenzi wako msimbo wake wa tarakimu 6 wa My Cycle: Period Tracker.',
     pairing_code_label: 'Msimbo wa kuunganisha',
     checking_dots: 'Inakagua...',
     pair_with_partner: 'Unganisha na mwenzi ✓',
@@ -948,7 +948,7 @@ export const translations = {
     share_sms: 'Shiriki kupitia SMS',
 
     // ── ONBOARDING ───────────────────────────────
-    welcome_title: 'Karibu kwenye\nCycleApp 🌸',
+    welcome_title: 'Karibu kwenye\nMy Cycle: Period Tracker 🌸',
     welcome_desc: 'Mfuatiliaji wako wa hedhi binafsi. Faragha, unafanya kazi bila mtandao, na umeundwa kwa mwili wako.',
     get_started: 'Anza →',
     go_to_dashboard: 'Nenda kwa dashibodi yangu 🏠',
@@ -998,7 +998,7 @@ export const translations = {
     notifications_blocked_status: 'Imezuiwa — washa kwenye mipangilio ya simu',
     reminders_active_status: 'Inatumika — vikumbusho vimepangwa',
     get_reminders_status: 'Pata vikumbusho vya mzunguko wako',
-    notifications_blocked_desc: '⚠️ Arifa zimezuiwa. Ziwashe kwenye Mipangilio ya simu yako → Programu → CycleApp → Arifa.',
+    notifications_blocked_desc: '⚠️ Arifa zimezuiwa. Ziwashe kwenye Mipangilio ya simu yako → Programu → Period Tracker → Arifa.',
     notif_works_closed: '💡 Arifa hufanya kazi hata programu ikiwa imefungwa kwa sababu zimepangwa kwenye kifaa chako kupitia mfumo wa arifa wa simu yako.',
     period_reminder_desc: 'Siku 2 kabla, siku 1 kabla, na siku ya hedhi',
     ovulation_reminder_desc: 'Siku moja kabla na siku ya ovulation',

@@ -132,7 +132,7 @@ export const scheduleMedicationReminders = async (medications) => {
 export const sendTestNotification = async () => {
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: '🌸 CycleApp notifications enabled!',
+      title: '🌸 My Cycle: Period Tracker notifications enabled!',
       body: 'You will receive period reminders and medication alerts.',
     },
     trigger: { type: 'timeInterval', seconds: 2, repeats: false },
