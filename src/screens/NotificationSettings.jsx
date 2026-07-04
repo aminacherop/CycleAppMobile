@@ -105,9 +105,9 @@ const NotificationSettings = ({ navigation, cycleSettings }) => {
     const fertileStart = ovulation.subtract(5, 'day')
 
     return [
-      { label: '🩸 Period reminder', date: nextPeriod.subtract(2, 'day').format('MMM D'), daysUntil: nextPeriod.subtract(2, 'day').diff(today, 'day'), active: prefs.periodReminder },
-      { label: '✨ Ovulation', date: ovulation.format('MMM D'), daysUntil: ovulation.diff(today, 'day'), active: prefs.ovulationReminder },
-      { label: '🌱 Fertile window', date: fertileStart.format('MMM D'), daysUntil: fertileStart.diff(today, 'day'), active: prefs.fertileReminder },
+      { label: t('reminder_period'), date: nextPeriod.subtract(2, 'day').format('MMM D'), daysUntil: nextPeriod.subtract(2, 'day').diff(today, 'day'), active: prefs.periodReminder },
+      { label: t('summ_ovulation'), date: ovulation.format('MMM D'), daysUntil: ovulation.diff(today, 'day'), active: prefs.ovulationReminder },
+      { label: t('reminder_fertile'), date: fertileStart.format('MMM D'), daysUntil: fertileStart.diff(today, 'day'), active: prefs.fertileReminder },
     ].filter(r => r.daysUntil >= 0).sort((a, b) => a.daysUntil - b.daysUntil)
   }
 

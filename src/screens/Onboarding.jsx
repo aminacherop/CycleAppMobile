@@ -11,13 +11,18 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker'
 import Slider from '@react-native-community/slider'
 import dayjs from 'dayjs'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
+import LanguagePicker from '../components/LanguagePicker'
 
 const Onboarding = ({ onComplete }) => {
   const { colors } = useTheme()
-  const { t } = useLanguage()
+  const { t, language, languages } = useLanguage()
+  const insets = useSafeAreaInsets()
+  const currentLang = languages.find(l => l.code === language)
   const [step, setStep] = useState(1)
+  const [showLangPicker, setShowLangPicker] = useState(false)
 
   const [data, setData] = useState({
     name: '',
@@ -32,21 +37,21 @@ const Onboarding = ({ onComplete }) => {
   const [showDatePicker, setShowDatePicker] = useState(false)
 
   const conditionOptions = [
-    { id: 'none', label: 'None', emoji: '✅' },
-    { id: 'pcos', label: 'PCOS', emoji: '🔵' },
-    { id: 'endo', label: 'Endometriosis', emoji: '🟠' },
-    { id: 'peri', label: 'Perimenopause', emoji: '🟣' },
-    { id: 'postpill', label: 'Post-pill', emoji: '💊' },
-    { id: 'other', label: 'Other', emoji: '⭕' },
+    { id: 'none', label: t('cond_none'), emoji: '✅' },
+    { id: 'pcos', label: t('cond_pcos'), emoji: '🔵' },
+    { id: 'endo', label: t('cond_endo'), emoji: '🟠' },
+    { id: 'peri', label: t('cond_peri'), emoji: '🟣' },
+    { id: 'postpill', label: t('cond_postpill'), emoji: '💊' },
+    { id: 'other', label: t('cond_other'), emoji: '⭕' },
   ]
 
   const validateStep = () => {
     const newErrors = {}
     if (step === 2 && !data.name.trim()) {
-      newErrors.name = 'Please enter your name'
+      newErrors.name = t('validate_name')
     }
     if (step === 3 && !data.lastPeriodStart) {
-      newErrors.lastPeriodStart = 'Please enter your last period date'
+      newErrors.lastPeriodStart = t('validate_period')
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -91,7 +96,7 @@ const Onboarding = ({ onComplete }) => {
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}
     >
       {/* Progress bar */}
       {step > 1 && (
@@ -99,34 +104,41 @@ const Onboarding = ({ onComplete }) => {
           <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
             <View style={[styles.progressFill, { width: progressWidth, backgroundColor: colors.pink }]} />
           </View>
-          <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>
-            Step {step - 1} of 3
-          </Text>
+          <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>{t('step_x_of_3', { n: step - 1 })}</Text>
         </View>
       )}
 
       {/* STEP 1 — WELCOME */}
       {step === 1 && (
         <View style={styles.center}>
+          <TouchableOpacity
+            style={[styles.langPill, { borderColor: colors.border, backgroundColor: colors.white }]}
+            onPress={() => setShowLangPicker(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 15 }}>{currentLang?.flag || '🌐'}</Text>
+            <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 13 }}>
+              {currentLang?.nativeName || 'English'}
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 11 }}>▾</Text>
+          </TouchableOpacity>
+
           <View style={[styles.welcomeCircle, { backgroundColor: colors.pinkLight }]}>
             <Text style={styles.welcomeEmoji}>🌸</Text>
           </View>
 
           <Text style={[styles.title, { color: colors.textPrimary }]}>
-            Welcome to{'\n'}My Cycle: Period Tracker 🌸
+            {t('welcome_title')}
           </Text>
 
-          <Text style={[styles.desc, { color: colors.textSecondary }]}>
-            Your personal period tracker for every woman.
-            Private, offline-first, and designed around your body.
-          </Text>
+          <Text style={[styles.desc, { color: colors.textSecondary }]}>{t('welcome_desc_full')}</Text>
 
           <View style={styles.featuresWrap}>
             {[
-              { icon: '📅', title: 'Track your cycle', desc: 'Predictions, fertile window, ovulation' },
-              { icon: '😊', title: 'Log daily health', desc: 'Mood, symptoms, water, sleep' },
-              { icon: '🔒', title: '100% private', desc: 'Data stays on your device' },
-              { icon: '💊', title: 'Medication reminders', desc: 'Pills, supplements, and more' },
+              { icon: '📅', title: t('feat_track_title'), desc: t('feat_track_desc') },
+              { icon: '😊', title: t('feat_log_title'), desc: t('feat_log_desc') },
+              { icon: '🔒', title: t('feat_private_title'), desc: t('feat_private_desc') },
+              { icon: '💊', title: t('feat_meds_title'), desc: t('feat_meds_desc') },
             ].map((f, i) => (
               <View key={i} style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Text style={styles.featureIcon}>{f.icon}</Text>
@@ -146,9 +158,7 @@ const Onboarding = ({ onComplete }) => {
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleComplete}>
-            <Text style={[styles.skipText, { color: colors.textSecondary }]}>
-              Skip setup — I'll configure later
-            </Text>
+            <Text style={[styles.skipText, { color: colors.textSecondary }]}>{t('skip_setup')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -157,12 +167,8 @@ const Onboarding = ({ onComplete }) => {
       {step === 2 && (
         <View>
           <Text style={styles.stepIcon}>👤</Text>
-          <Text style={[styles.titleSmall, { color: colors.textPrimary }]}>
-            Tell us about yourself
-          </Text>
-          <Text style={[styles.desc, { color: colors.textSecondary }]}>
-            This helps us personalise your experience.
-          </Text>
+          <Text style={[styles.titleSmall, { color: colors.textPrimary }]}>{t('tell_us')}</Text>
+          <Text style={[styles.desc, { color: colors.textSecondary }]}>{t('onboarding_personalise')}</Text>
 
           <View style={styles.formGroup}>
             <Text style={[styles.label, { color: colors.textPrimary }]}>{t('your_name')} *</Text>
@@ -186,9 +192,7 @@ const Onboarding = ({ onComplete }) => {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={[styles.label, { color: colors.textPrimary }]}>
-              Health condition (optional)
-            </Text>
+            <Text style={[styles.label, { color: colors.textPrimary }]}>{t('health_condition_optional')}</Text>
             <View style={styles.conditionGrid}>
               {conditionOptions.map(c => (
                 <TouchableOpacity
@@ -235,12 +239,8 @@ const Onboarding = ({ onComplete }) => {
       {step === 3 && (
         <View>
           <Text style={styles.stepIcon}>🩸</Text>
-          <Text style={[styles.titleSmall, { color: colors.textPrimary }]}>
-            Set up your cycle
-          </Text>
-          <Text style={[styles.desc, { color: colors.textSecondary }]}>
-            This is how we calculate your next period, ovulation, and fertile window.
-          </Text>
+          <Text style={[styles.titleSmall, { color: colors.textPrimary }]}>{t('setup_cycle')}</Text>
+          <Text style={[styles.desc, { color: colors.textSecondary }]}>{t('onboarding_calc_desc')}</Text>
 
           <View style={styles.formGroup}>
             <Text style={[styles.label, { color: colors.textPrimary }]}>
@@ -370,17 +370,15 @@ const Onboarding = ({ onComplete }) => {
             You're all set,{'\n'}{data.name || 'welcome'}! 🌸
           </Text>
 
-          <Text style={[styles.desc, { color: colors.textSecondary }]}>
-            Your cycle has been set up successfully.
-          </Text>
+          <Text style={[styles.desc, { color: colors.textSecondary }]}>{t('cycle_setup_success')}</Text>
 
           {data.lastPeriodStart && (
             <View style={[styles.summaryCard, { backgroundColor: colors.white, borderColor: colors.border }]}>
               {[
-                { label: '🩸 Next period', value: nextPeriod },
-                { label: '✨ Ovulation', value: ovulationDate },
-                { label: '🔄 Cycle length', value: `${data.cycleLength} days` },
-                { label: '📅 Period length', value: `${data.periodLength} days` },
+                { label: t('summ_next_period'), value: nextPeriod },
+                { label: t('summ_ovulation'), value: ovulationDate },
+                { label: t('summ_cycle_length'), value: `${data.cycleLength} days` },
+                { label: t('summ_period_length'), value: `${data.periodLength} days` },
               ].map((row, i) => (
                 <View key={i} style={[styles.summaryRow, { borderBottomColor: colors.border }]}>
                   <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{row.label}</Text>
@@ -398,11 +396,23 @@ const Onboarding = ({ onComplete }) => {
           </TouchableOpacity>
         </View>
       )}
+      <LanguagePicker visible={showLangPicker} onClose={() => setShowLangPicker(false)} />
     </ScrollView>
   )
 }
 
 const makeStyles = (colors) => StyleSheet.create({
+  langPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 18,
+  },
   container: {
     flex: 1,
   },

@@ -246,10 +246,8 @@ const Articles = ({ navigation }) => {
         <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>← Back</Text>
       </TouchableOpacity>
 
-      <Text style={[styles.title, { color: colors.textPrimary }]}>Health Articles</Text>
-      <Text style={[styles.sub, { color: colors.textSecondary }]}>
-        Evidence-based health information for women
-      </Text>
+      <Text style={[styles.title, { color: colors.textPrimary }]}>{t('health_articles')}</Text>
+      <Text style={[styles.sub, { color: colors.textSecondary }]}>{t('articles_subtitle')}</Text>
 
       {/* Search */}
       <TextInput
@@ -307,7 +305,7 @@ const Articles = ({ navigation }) => {
       {filtered.length === 0 && (
         <View style={{ alignItems: 'center', padding: 40 }}>
           <Text style={{ fontSize: 36, marginBottom: 10 }}>🔍</Text>
-          <Text style={{ color: colors.textSecondary }}>No articles found</Text>
+          <Text style={{ color: colors.textSecondary }}>{t('no_articles_found')}</Text>
         </View>
       )}
 

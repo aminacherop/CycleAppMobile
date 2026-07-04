@@ -94,10 +94,15 @@ export const getCycleRegularitySummary = (dailyLogs, cycleSettings) => {
     score >= 60 ? 'Mostly Regular' :
     score >= 40 ? 'Somewhat Irregular' : 'Irregular'
 
+  const labelKey =
+    score >= 80 ? 'reg_very_regular' :
+    score >= 60 ? 'reg_mostly_regular' :
+    score >= 40 ? 'reg_somewhat_irregular' : 'reg_irregular'
+
   const color =
     score >= 80 ? '#10B981' :
     score >= 60 ? '#F59E0B' :
     score >= 40 ? '#F97316' : '#EF4444'
 
-  return { score, label, avg, min, max, cyclesAnalyzed: lengths.length, color }
+  return { score, label, labelKey, avg, min, max, cyclesAnalyzed: lengths.length, color }
 }

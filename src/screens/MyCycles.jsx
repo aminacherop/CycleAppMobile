@@ -58,7 +58,7 @@ const MyCycles = ({ cycleSettings, dailyLogs, userProfile, installDate, navigati
   }, {})
 
   const filterOptions = [
-    { id: 'all', label: 'All' },
+    { id: 'all', label: t('all_filter') },
     { id: 'period', label: t('period') },
     { id: 'ovulation', label: t('ovulation') },
     { id: 'fertile', label: t('fertile') },
@@ -107,12 +107,12 @@ const MyCycles = ({ cycleSettings, dailyLogs, userProfile, installDate, navigati
           <View style={[styles.statCard, { backgroundColor: colors.pinkLight }]}>
             <Text style={{ fontSize: 22 }}>🩸</Text>
             <Text style={[styles.statValue, { color: colors.pinkDark }]}>{avgPeriod} Days</Text>
-            <Text style={[styles.statLabel, { color: colors.pink }]}>Average period</Text>
+            <Text style={[styles.statLabel, { color: colors.pink }]}>{t('average_period')}</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#FEF3C7' }]}>
             <Text style={{ fontSize: 22 }}>🔄</Text>
             <Text style={[styles.statValue, { color: '#92400E' }]}>{avgCycle} Days</Text>
-            <Text style={[styles.statLabel, { color: '#B45309' }]}>Average cycle</Text>
+            <Text style={[styles.statLabel, { color: '#B45309' }]}>{t('average_cycle')}</Text>
           </View>
         </View>
 
@@ -121,7 +121,7 @@ const MyCycles = ({ cycleSettings, dailyLogs, userProfile, installDate, navigati
           onPress={() => navigation.navigate('Log')}
         >
           <Text style={styles.addPeriodIcon}>+</Text>
-          <Text style={styles.addPeriodText}>Add Period</Text>
+          <Text style={styles.addPeriodText}>{t('add_period')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -139,9 +139,7 @@ const MyCycles = ({ cycleSettings, dailyLogs, userProfile, installDate, navigati
 
       {/* History card */}
       <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.border }]}>
-        <Text style={[styles.cardTitle, { color: colors.textPrimary, marginBottom: 12 }]}>
-          History
-        </Text>
+        <Text style={[styles.cardTitle, { color: colors.textPrimary, marginBottom: 12 }]}>{t('history_tab')}</Text>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -169,9 +167,7 @@ const MyCycles = ({ cycleSettings, dailyLogs, userProfile, installDate, navigati
         </ScrollView>
 
         {cycles.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            No cycles logged yet
-          </Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t('no_cycles_logged')}</Text>
         ) : (
           Object.entries(groupedByYear).map(([year, yearCycles]) => (
             <View key={year} style={{ marginBottom: 16 }}>

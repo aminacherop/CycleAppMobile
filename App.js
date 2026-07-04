@@ -7,12 +7,13 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { Text, View, ActivityIndicator, StyleSheet } from 'react-native'
 import * as Notifications from 'expo-notifications'
 import * as SplashScreen from 'expo-splash-screen'
+import { StatusBar } from 'expo-status-bar'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
 const navigationRef = createNavigationContainerRef()
-import { ThemeProvider } from './src/context/ThemeContext'
-import { LanguageProvider } from './src/context/LanguageContext'
+import { ThemeProvider, useTheme } from './src/context/ThemeContext'
+import { LanguageProvider, useLanguage } from './src/context/LanguageContext'
 import useAppData from './src/hooks/useAppData'
 import AnimatedSplash from './src/components/AnimatedSplash'
 import Onboarding from './src/screens/Onboarding'
@@ -267,6 +268,9 @@ const TabNavigator = ({ appData }) => {
 
 const AppContent = () => {
   const appData = useAppData()
+  const insets = useSafeAreaInsets()
+  const { colors, isDark } = useTheme()
+  const { loading: langLoading } = useLanguage()
 
   const navigateFromNotificationData = (data) => {
     if (!data) return
@@ -308,24 +312,27 @@ const AppContent = () => {
     SplashScreen.hideAsync().catch(() => {})
   }, [])
 
-  if (appData.loading) {
+  if (appData.loading || langLoading) {
     return <AnimatedSplash />
   }
 
   return (
-    <NavigationContainer ref={navigationRef}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!appData.isOnboarded ? (
-          <Stack.Screen name="Onboarding">
-            {() => <Onboarding onComplete={appData.completeOnboarding} />}
-          </Stack.Screen>
-        ) : (
-          <Stack.Screen name="Main">
-            {() => <TabNavigator appData={appData} />}
-          </Stack.Screen>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <NavigationContainer ref={navigationRef}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {!appData.isOnboarded ? (
+            <Stack.Screen name="Onboarding">
+              {() => <Onboarding onComplete={appData.completeOnboarding} />}
+            </Stack.Screen>
+          ) : (
+            <Stack.Screen name="Main">
+              {() => <TabNavigator appData={appData} />}
+            </Stack.Screen>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </View>
   )
 }
 

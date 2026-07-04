@@ -13,6 +13,7 @@ import { useFocusEffect } from '@react-navigation/native'
 import Svg, { Circle } from 'react-native-svg'
 const AnimatedCircle = Animated.createAnimatedComponent(Circle)
 import dayjs from 'dayjs'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import { getUnreadNotificationCount } from '../utils/notifications'
@@ -21,6 +22,7 @@ import { getDailyInsight } from '../utils/dailyInsights'
 
 const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userProfile, todayLog, saveLog, dailyLogs, navigation }) => {
   const { colors, isDark, changeTheme } = useTheme()
+  const insets = useSafeAreaInsets()
   const [unreadCount, setUnreadCount] = useState(0)
   const welcomeOpacity = useRef(new Animated.Value(0)).current
   const welcomeTranslateY = useRef(new Animated.Value(-16)).current
@@ -96,7 +98,7 @@ const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userP
     return () => subscription.remove()
   }, [])
 
-  const { t, language, changeLanguage } = useLanguage()
+  const { t } = useLanguage()
   const [selectedMood, setSelectedMood] = useState(null)
   const [tipOffset, setTipOffset] = useState(0)
   const [showPeriodSheet, setShowPeriodSheet] = useState(false)
@@ -164,10 +166,10 @@ const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userP
     currentCycleDay <= ovulationWindowEnd ? 'Ovulation' : 'Luteal'
 
   const phaseInfo = {
-    Menstrual: { color: '#EC4899', bg: '#FCE7F3', emoji: '🌸', tip: 'Rest and be gentle with yourself today.' },
-    Follicular: { color: '#7C3AED', bg: '#EDE9FE', emoji: '🌱', tip: 'Energy is rising — great time to start new things.' },
-    Ovulation: { color: '#F59E0B', bg: '#FEF3C7', emoji: '✨', tip: 'You are at your most energetic and social today.' },
-    Luteal: { color: '#10B981', bg: '#D1FAE5', emoji: '🍂', tip: 'Wind down and focus on self care this week.' },
+    Menstrual: { color: '#EC4899', bg: '#FCE7F3', emoji: '🌸', tip: t('phase_tip_menstrual') },
+    Follicular: { color: '#7C3AED', bg: '#EDE9FE', emoji: '🌱', tip: t('phase_tip_follicular') },
+    Ovulation: { color: '#F59E0B', bg: '#FEF3C7', emoji: '✨', tip: t('phase_tip_ovulation') },
+    Luteal: { color: '#10B981', bg: '#D1FAE5', emoji: '🍂', tip: t('phase_tip_luteal') },
   }
 
   const phase = phaseInfo[currentPhase]
@@ -190,7 +192,7 @@ const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userP
 
   const statCards = [
     {
-      label: 'CYCLE DAY',
+      label: t('cycle_day_label'),
       value: currentCycleDay,
       ring: true,
       bg: colors.background,
@@ -235,15 +237,6 @@ const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userP
           <Text style={{ fontSize: 22 }}>⚙️</Text>
         </TouchableOpacity>
         <View style={styles.topBarRight}>
-          <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: colors.white, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 10 }]}
-            onPress={() => changeLanguage(language === 'en' ? 'sw' : 'en')}
-          >
-            <Text style={{ fontSize: 12 }}>🌍</Text>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.pink }}>
-              {language === 'en' ? 'EN' : 'SW'}
-            </Text>
-          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.iconBtn, { backgroundColor: colors.white, borderColor: colors.border }]}
             onPress={() => changeTheme(isDark ? 'light' : 'dark')}
@@ -291,7 +284,7 @@ const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userP
             {name ? `Hi, ${displayedName || ''}${displayedName.length < name.length ? '|' : ' 👋'}` : '👋'}
           </Animated.Text>
           <Animated.Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2, opacity: welcomeOpacity }}>
-            {phase.emoji} {currentPhase} phase · Day {currentCycleDay}
+            {phase.emoji} {t('phase_' + currentPhase.toLowerCase())} {t('phase_word')} · {t('day_label')} {currentCycleDay}
           </Animated.Text>
         </View>
 
@@ -580,9 +573,7 @@ const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userP
         <Text style={[styles.feelingTitle, { color: colors.textPrimary }]}>
           {t('how_feeling')}
         </Text>
-        <Text style={[styles.feelingSub, { color: colors.textSecondary }]}>
-          Tell us more about your body to get analysis
-        </Text>
+        <Text style={[styles.feelingSub, { color: colors.textSecondary }]}>{t('add_body_analysis')}</Text>
 
         {selectedMood && (
           <View style={styles.moodGrid}>
@@ -613,7 +604,7 @@ const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userP
           style={[styles.addSymptomBtn, { backgroundColor: '#5B4FE5' }]}
           onPress={() => navigation?.navigate('AddSymptom')}
         >
-          <Text style={styles.addSymptomBtnText}>Add Symptom</Text>
+          <Text style={styles.addSymptomBtnText}>{t('add_symptom_title')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -655,7 +646,7 @@ const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userP
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <Text style={[styles.tipTitle, { color: phase.color }]}>
-              {phase.emoji} {currentPhase} phase
+              {phase.emoji} {t('phase_' + currentPhase.toLowerCase())} {t('phase_word')}
             </Text>
             <Text style={{ fontSize: 16, color: colors.textSecondary }}>↻</Text>
           </View>
@@ -698,7 +689,7 @@ const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userP
       <Modal visible={showPeriodSheet} transparent animationType="slide">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowPeriodSheet(false)} />
-          <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+          <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 24 + insets.bottom }}>
             <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 }}>
               🩸 {t('when_period_start') || 'When did your period start?'}
             </Text>
@@ -763,7 +754,7 @@ const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userP
       <Modal visible={showPeriodEndSheet} transparent animationType="slide">
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
           <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowPeriodEndSheet(false)} />
-          <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+          <View style={{ backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 24 + insets.bottom }}>
             <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 }}>
               ✅ {t('when_period_end') || 'When did your period end?'}
             </Text>

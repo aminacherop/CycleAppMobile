@@ -7,6 +7,7 @@ import {
   StyleSheet,
 } from 'react-native'
 import dayjs from 'dayjs'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import { saveData } from '../utils/storage'
@@ -22,6 +23,7 @@ const MONTHS = [
 
 const GestationDatePicker = ({ route, navigation }) => {
   const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
   const { t } = useLanguage()
   const initialDate = route?.params?.gestationStart
     ? dayjs(route.params.gestationStart)
@@ -95,7 +97,7 @@ const GestationDatePicker = ({ route, navigation }) => {
 
   return (
     <View style={styles.overlay}>
-    <View style={[styles.container, { backgroundColor: colors.white }]}>
+    <View style={[styles.container, { backgroundColor: colors.white, paddingBottom: 40 + insets.bottom }]}>
 
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>

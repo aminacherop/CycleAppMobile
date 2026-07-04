@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native'
 import dayjs from 'dayjs'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import { saveData, loadData } from '../utils/storage'
 
 const PregnancyMode = ({ navigation }) => {
   const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
   const { t } = useLanguage()
   const [gestationStart, setGestationStart] = useState(dayjs().format('YYYY-MM-DD'))
   const [showTurnOffModal, setShowTurnOffModal] = useState(false)
@@ -139,7 +141,7 @@ const PregnancyMode = ({ navigation }) => {
             style={styles.modalBackdrop}
             onPress={() => setShowTurnOffModal(false)}
           />
-          <View style={[styles.sheet, { backgroundColor: colors.white }]}>
+          <View style={[styles.sheet, { backgroundColor: colors.white, paddingBottom: 24 + insets.bottom }]}>
             <TouchableOpacity
               style={styles.closeX}
               onPress={() => setShowTurnOffModal(false)}
@@ -171,7 +173,7 @@ const PregnancyMode = ({ navigation }) => {
             style={styles.modalBackdrop}
             onPress={() => setShowHomepageModal(false)}
           />
-          <View style={[styles.sheet, { backgroundColor: colors.white }]}>
+          <View style={[styles.sheet, { backgroundColor: colors.white, paddingBottom: 24 + insets.bottom }]}>
             <View style={styles.homepageHeaderRow}>
               <Text style={[styles.homepageTitle, { color: colors.textPrimary }]}>
                 {t('choose_homepage_option')}

@@ -12,14 +12,17 @@ import {
 import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
+import LanguagePicker from '../components/LanguagePicker'
 
 const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile, resetAllData, navigation }) => {
     const { colors, isDark, changeTheme, theme } = useTheme()
-    const { language, changeLanguage, t } = useLanguage()
+    const { language, changeLanguage, t, languages } = useLanguage()
+    const currentLang = languages.find(l => l.code === language)
 
     const [activeTab, setActiveTab] = useState('profile')
     const [isEditing, setIsEditing] = useState(false)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [showLangPicker, setShowLangPicker] = useState(false)
     const [deleting, setDeleting] = useState(false)
 
     const [profile, setProfile] = useState({
@@ -70,9 +73,9 @@ const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile,
 
     const conditionOptions = [
         { id: 'none', label: t('condition_none') },
-        { id: 'pcos', label: 'PCOS' },
-        { id: 'endo', label: 'Endometriosis' },
-        { id: 'peri', label: 'Perimenopause' },
+        { id: 'pcos', label: t('cond_pcos') },
+        { id: 'endo', label: t('cond_endo') },
+        { id: 'peri', label: t('cond_peri') },
         { id: 'other', label: t('condition_other') },
     ]
 
@@ -176,7 +179,7 @@ const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile,
                             style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
                             value={draftProfile.name}
                             onChangeText={t => setDraftProfile(p => ({ ...p, name: t }))}
-                            placeholder="Your name"
+                            placeholder={t('your_name')}
                             placeholderTextColor={colors.textSecondary}
                         />
 
@@ -310,61 +313,43 @@ const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile,
                     {/* Language */}
                     <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.border }]}>
                         <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>🌍 {t('language')}</Text>
-                        <View style={styles.rowBtns}>
-                            
-                            <TouchableOpacity
-                                style={[styles.choiceBtn, {
-                                    borderColor: language === 'en' ? colors.pink : colors.border,
-                                    backgroundColor: language === 'en' ? colors.pinkLight : colors.background,
-                                }]}
-                                onPress={() => changeLanguage('en')}
-                            >
-                                <Text style={{
-                                    color: language === 'en' ? colors.pinkDark : colors.textPrimary,
-                                    fontWeight: language === 'en' ? '700' : '500',
-                                }}>
-                                    English
+                        <TouchableOpacity
+                            style={[styles.langRow, { borderColor: colors.border, backgroundColor: colors.background }]}
+                            onPress={() => setShowLangPicker(true)}
+                        >
+                            <Text style={{ fontSize: 24 }}>{currentLang?.flag}</Text>
+                            <View style={{ flex: 1 }}>
+                                <Text style={{ color: colors.textPrimary, fontWeight: '700', fontSize: 15 }}>
+                                    {currentLang?.nativeName || 'English'}
                                 </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.choiceBtn, {
-                                    borderColor: language === 'sw' ? colors.pink : colors.border,
-                                    backgroundColor: language === 'sw' ? colors.pinkLight : colors.background,
-                                }]}
-                                onPress={() => changeLanguage('sw')}
-                            >
-                                <Text style={{
-                                    color: language === 'sw' ? colors.pinkDark : colors.textPrimary,
-                                    fontWeight: language === 'sw' ? '700' : '500',
-                                }}>
-                                    Kiswahili
+                                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                                    {currentLang?.name || 'English'}
                                 </Text>
-                            </TouchableOpacity>
-
-                           
-                        </View>
+                            </View>
+                            <Text style={{ color: colors.textSecondary, fontSize: 20 }}>›</Text>
+                        </TouchableOpacity>
                     </View>
 
                     {/* Theme */}
                     <View style={[styles.card, { backgroundColor: colors.white, borderColor: colors.border }]}>
                         <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
-                            {isDark ? '🌙 Dark mode' : '☀️ Light mode'}
+                            {isDark ? `🌙 ${t('dark_mode')}` : `☀️ ${t('light_mode')}`}
                         </Text>
                         <View style={styles.rowBtns}>
-                            {['light', 'dark', 'system'].map(t => (
+                            {['light', 'dark', 'system'].map(mode => (
                                 <TouchableOpacity
-                                    key={t}
+                                    key={mode}
                                     style={[styles.choiceBtnSmall, {
-                                        borderColor: theme === t ? colors.pink : colors.border,
-                                        backgroundColor: theme === t ? colors.pinkLight : colors.background,
+                                        borderColor: theme === mode ? colors.pink : colors.border,
+                                        backgroundColor: theme === mode ? colors.pinkLight : colors.background,
                                     }]}
-                                    onPress={() => changeTheme(t)}
+                                    onPress={() => changeTheme(mode)}
                                 >
                                     <Text style={{
-                                        color: theme === t ? colors.pinkDark : colors.textPrimary,
+                                        color: theme === mode ? colors.pinkDark : colors.textPrimary,
                                         fontSize: 12,
                                     }}>
-                                        {t === 'light' ? '☀️ Light' : t === 'dark' ? '🌙 Dark' : '📱 System'}
+                                        {mode === 'light' ? `☀️ ${t('theme_light')}` : mode === 'dark' ? `🌙 ${t('theme_dark')}` : `📱 ${t('theme_system')}`}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
@@ -417,7 +402,7 @@ const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile,
                             onPress={() => Linking.openURL('https://sites.google.com/view/cycleapp-privacy/home')}
                         >
                             <Text style={{ fontSize: 18 }}>🔒</Text>
-                            <Text style={[styles.navItemLabel, { color: colors.textPrimary }]}>Privacy Policy</Text>
+                            <Text style={[styles.navItemLabel, { color: colors.textPrimary }]}>{t('privacy_policy')}</Text>
                             <Text style={{ color: colors.textSecondary }}>→</Text>
                         </TouchableOpacity>
                     </View>
@@ -444,9 +429,7 @@ const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile,
                 <View style={styles.modalOverlay}>
                     <View style={[styles.confirmCard, { backgroundColor: colors.white }]}>
                         <Text style={{ fontSize: 40, textAlign: 'center', marginBottom: 10 }}>⚠️</Text>
-                        <Text style={[styles.confirmTitle, { color: colors.textPrimary }]}>
-                            Delete all data?
-                        </Text>
+                        <Text style={[styles.confirmTitle, { color: colors.textPrimary }]}>{t('delete_confirm_title')}</Text>
                         <Text style={[styles.confirmDesc, { color: colors.textSecondary }]}>
                             This will permanently delete your profile, cycle history, and all logs. This cannot be undone.
                         </Text>
@@ -455,7 +438,7 @@ const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile,
                                 style={[styles.confirmCancelBtn, { borderColor: colors.border }]}
                                 onPress={() => setShowDeleteModal(false)}
                             >
-                                <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Cancel</Text>
+                                <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>{t('cancel')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.confirmDeleteBtn}
@@ -470,6 +453,8 @@ const Profile = ({ cycleSettings, setCycleSettings, userProfile, setUserProfile,
                     </View>
                 </View>
             </Modal>
+
+            <LanguagePicker visible={showLangPicker} onClose={() => setShowLangPicker(false)} />
 
         </ScrollView>
     )
@@ -580,6 +565,7 @@ const makeStyles = (colors) => StyleSheet.create({
     },
     saveBtnText: { color: 'white', fontSize: 14, fontWeight: '700' },
     rowBtns: { flexDirection: 'row', gap: 8 },
+    langRow: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 14, borderWidth: 1.5 },
     choiceBtn: {
         flex: 1,
         paddingVertical: 12,

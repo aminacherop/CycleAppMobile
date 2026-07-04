@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import dayjs from 'dayjs'
 import DateTimePicker from '@react-native-community/datetimepicker'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import {
@@ -30,6 +31,7 @@ import {
 
 const Medications = ({ navigation }) => {
   const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
   const { t } = useLanguage()
   const [medications, setMedications] = useState([])
   const [todayLogs, setTodayLogs] = useState({})
@@ -256,7 +258,7 @@ const Medications = ({ navigation }) => {
       {/* Add Modal */}
       <Modal visible={showAddModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: colors.white }]}>
+          <View style={[styles.modalCard, { backgroundColor: colors.white, paddingBottom: 20 + insets.bottom }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t('add_medication_title')}</Text>
 

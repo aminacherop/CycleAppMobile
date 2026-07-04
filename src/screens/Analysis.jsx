@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import dayjs from 'dayjs'
 import DateTimePicker from '@react-native-community/datetimepicker'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import { saveData, loadData } from '../utils/storage'
@@ -40,6 +41,7 @@ const DEFAULT_REMINDERS = {
 
 const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, navigation }) => {
   const { colors } = useTheme()
+  const insets = useSafeAreaInsets()
   const { t } = useLanguage()
 
   const [goal, setGoal] = useState('track_period')
@@ -333,14 +335,14 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
           <View style={[styles.iconCircle, { backgroundColor: colors.pinkLight }]}>
             <Text style={{ fontSize: 22 }}>⚙️</Text>
           </View>
-          <Text style={[styles.iconLabel, { color: colors.textSecondary }]}>Settings</Text>
+          <Text style={[styles.iconLabel, { color: colors.textSecondary }]}>{t('settings')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.iconBtnWrap} onPress={() => setShowRemindersModal(true)}>
           <View style={[styles.iconCircle, { backgroundColor: colors.pinkLight }]}>
             <Text style={{ fontSize: 22 }}>🔔</Text>
           </View>
-          <Text style={[styles.iconLabel, { color: colors.textSecondary }]}>Reminders</Text>
+          <Text style={[styles.iconLabel, { color: colors.textSecondary }]}>{t('reminders_label')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -379,9 +381,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
               onPress={() => navigation?.navigate('PregnancyMode')}
             >
               <Text style={{ fontSize: 18 }}>🤰</Text>
-              <Text style={[styles.settingsRowTitle, { color: colors.textPrimary, flex: 1 }]}>
-                Pregnancy settings
-              </Text>
+              <Text style={[styles.settingsRowTitle, { color: colors.textPrimary, flex: 1 }]}>{t('pregnancy_settings')}</Text>
               <Text style={{ color: colors.pink, fontWeight: '700', fontSize: 13, textAlign: 'right' }}>
                 {pregnancyWeeks} Weeks{'\n'}{pregnancyDays} Days
               </Text>
@@ -390,9 +390,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
             {/* My baby was born toggle */}
             <View style={[styles.settingsRow, { borderTopColor: colors.border }]}>
               <Text style={{ fontSize: 18 }}>🌱</Text>
-              <Text style={[styles.settingsRowTitle, { color: colors.textPrimary, flex: 1 }]}>
-                My baby was born!
-              </Text>
+              <Text style={[styles.settingsRowTitle, { color: colors.textPrimary, flex: 1 }]}>{t('my_baby_was_born')}</Text>
               <Switch
                 value={false}
                 onValueChange={handleBabyBornToggle}
@@ -416,9 +414,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
                 <Text style={[styles.settingsRowTitle, { color: colors.textPrimary }]}>
                   {t('prediction_settings')}
                 </Text>
-                <Text style={[styles.settingsRowSub, { color: colors.textSecondary }]}>
-                  For period, cycle, and ovulation
-                </Text>
+                <Text style={[styles.settingsRowSub, { color: colors.textSecondary }]}>{t('for_period_cycle_ovulation')}</Text>
               </View>
               <Text style={{ fontSize: 18, color: colors.textSecondary }}>›</Text>
             </TouchableOpacity>
@@ -467,7 +463,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 15, fontWeight: '700', color: regularitySummary.color, marginBottom: 4 }}>
-                  {regularitySummary.label}
+                  {t(regularitySummary.labelKey)}
                 </Text>
                 <Text style={{ fontSize: 12, color: colors.textSecondary }}>
                   {regularitySummary.cyclesAnalyzed} {t('cycles_analyzed')}
@@ -614,12 +610,12 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
           <View style={[styles.statCard, { backgroundColor: colors.pinkLight }]}>
             <Text style={{ fontSize: 20 }}>🩸</Text>
             <Text style={[styles.statValue, { color: colors.pinkDark }]}>{avgPeriod} Days</Text>
-            <Text style={[styles.statLabel, { color: colors.pink }]}>Average period</Text>
+            <Text style={[styles.statLabel, { color: colors.pink }]}>{t('average_period')}</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: '#FEF3C7' }]}>
             <Text style={{ fontSize: 20 }}>🔄</Text>
             <Text style={[styles.statValue, { color: '#92400E' }]}>{avgCycle} Days</Text>
-            <Text style={[styles.statLabel, { color: '#B45309' }]}>Average cycle</Text>
+            <Text style={[styles.statLabel, { color: '#B45309' }]}>{t('average_cycle')}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -635,9 +631,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
           <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>{t('timeline')}</Text>
         </View>
         {timelineEvents.length === 0 ? (
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            No events logged yet
-          </Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t('no_events_logged')}</Text>
         ) : (
           <View style={{ gap: 10, marginTop: 8 }}>
             {timelineEvents.map((event, i) => (
@@ -660,7 +654,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
       {/* ── REMINDERS MODAL ── */}
       <Modal visible={showRemindersModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: colors.white }]}>
+          <View style={[styles.modalCard, { backgroundColor: colors.white, paddingBottom: 20 + insets.bottom }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.cardHeader}>
                 <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>🔔 Reminders</Text>
@@ -699,9 +693,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
                       onPress={() => setShowDailyTimePicker(true)}
                     >
                       <Text style={{ fontSize: 15 }}>⏰</Text>
-                      <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}>
-                        Daily log time
-                      </Text>
+                      <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}>{t('daily_log_time')}</Text>
                       <Text style={{ color: colors.pink, fontWeight: '700', fontSize: 13 }}>
                         {dayjs(`2000-01-01T${reminders.dailyLogTime || '20:00'}`).format('h:mm A')}
                       </Text>
@@ -727,9 +719,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
                       onPress={() => setShowWaterTimePicker(true)}
                     >
                       <Text style={{ fontSize: 15 }}>💧</Text>
-                      <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}>
-                        Drink water time
-                      </Text>
+                      <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 13 }}>{t('drink_water_time')}</Text>
                       <Text style={{ color: colors.pink, fontWeight: '700', fontSize: 13 }}>
                         {dayjs(`2000-01-01T${reminders.waterReminderTime || '11:00'}`).format('h:mm A')}
                       </Text>
@@ -756,7 +746,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
                 style={[styles.modalCloseBtn, { backgroundColor: colors.pink }]}
                 onPress={() => setShowRemindersModal(false)}
               >
-                <Text style={{ color: 'white', fontWeight: '700' }}>Done</Text>
+                <Text style={{ color: 'white', fontWeight: '700' }}>{t('done')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -766,7 +756,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
       {/* ── PREDICTION EDIT MODAL ── */}
       <Modal visible={showPredictionModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: colors.white }]}>
+          <View style={[styles.modalCard, { backgroundColor: colors.white, paddingBottom: 20 + insets.bottom }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
               🔮 {t('prediction_settings')}
             </Text>
@@ -814,13 +804,13 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
                 style={[styles.modalCancel, { borderColor: colors.border }]}
                 onPress={() => setShowPredictionModal(false)}
               >
-                <Text style={{ color: colors.textSecondary }}>Cancel</Text>
+                <Text style={{ color: colors.textSecondary }}>{t('cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalSave, { backgroundColor: colors.pink }]}
                 onPress={handleSavePredictions}
               >
-                <Text style={{ color: 'white', fontWeight: '700' }}>Save</Text>
+                <Text style={{ color: 'white', fontWeight: '700' }}>{t('save')}</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -222,7 +222,7 @@ const LogToday = ({ saveLog, todayLog, navigation }) => {
             borderColor: colors.border,
             color: colors.textPrimary,
           }]}
-          placeholder="How are you feeling today?"
+          placeholder={t('how_feeling')}
           placeholderTextColor={colors.textSecondary}
           value={notes}
           onChangeText={setNotes}

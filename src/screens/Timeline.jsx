@@ -122,7 +122,7 @@ const Timeline = ({ cycleSettings, dailyLogs, navigation }) => {
         <Text style={{ fontSize: 16, marginRight: 8 }}>🔍</Text>
         <TextInput
           style={[styles.searchInput, { color: colors.textPrimary }]}
-          placeholder="Search"
+          placeholder={t('search')}
           placeholderTextColor={colors.textSecondary}
           value={search}
           onChangeText={setSearch}
@@ -133,9 +133,7 @@ const Timeline = ({ cycleSettings, dailyLogs, navigation }) => {
       {events.length === 0 ? (
         <View style={styles.emptyWrap}>
           <Text style={{ fontSize: 40 }}>📍</Text>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            No events found
-          </Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t('no_events_found')}</Text>
         </View>
       ) : (
         <View style={{ gap: 14 }}>
