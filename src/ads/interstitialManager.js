@@ -1,5 +1,6 @@
 import { InterstitialAd, AdEventType } from 'react-native-google-mobile-ads'
 import { AD_UNITS, requestOptions, AD_FREQUENCY } from './adConfig'
+import { markFullScreenOpened, markFullScreenClosed } from './adCoordinator'
 
 // Singleton interstitial manager. Keeps ONE ad preloaded at all times,
 // rebuilds after every show/error (an ad object can only be shown once),
@@ -31,11 +32,15 @@ const build = () => {
     loading = false
     scheduleReload(AD_FREQUENCY.interstitialErrorBackoffMs)
   })
+  const offOpened = ad.addAdEventListener(AdEventType.OPENED, () => {
+    markFullScreenOpened() // so App Open won't fire on the resume that follows
+  })
   const offClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
+    markFullScreenClosed()
     loaded = false
     preloadInterstitial() // immediately warm the next one
   })
-  unsub = () => { offLoaded(); offError(); offClosed() }
+  unsub = () => { offLoaded(); offError(); offOpened(); offClosed() }
 }
 
 const scheduleReload = (delay) => {

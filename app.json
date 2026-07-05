@@ -18,7 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFF6F9"
+        "backgroundColor": "#FA035B"
       },
       "package": "com.mycycleapp.periodtracker"
     },

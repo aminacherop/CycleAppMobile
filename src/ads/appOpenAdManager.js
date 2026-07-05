@@ -1,6 +1,7 @@
 import { AppState } from 'react-native'
 import { AppOpenAd, AdEventType } from 'react-native-google-mobile-ads'
 import { AD_UNITS, requestOptions, AD_FREQUENCY } from './adConfig'
+import { markFullScreenOpened, markFullScreenClosed, isResumeFromAd } from './adCoordinator'
 
 // Singleton App Open manager. Preloads an App Open ad, shows it on cold
 // start (once, after the splash) and whenever the app returns to the
@@ -45,12 +46,16 @@ const build = () => {
     loading = false
     pendingColdShow = false
   })
+  const offOpened = ad.addAdEventListener(AdEventType.OPENED, () => {
+    markFullScreenOpened()
+  })
   const offClosed = ad.addAdEventListener(AdEventType.CLOSED, () => {
+    markFullScreenClosed()
     loaded = false
     showing = false
     preloadAppOpen() // warm the next one
   })
-  unsub = () => { offLoaded(); offError(); offClosed() }
+  unsub = () => { offLoaded(); offError(); offOpened(); offClosed() }
 }
 
 export const preloadAppOpen = () => {
@@ -91,7 +96,12 @@ export const startAppOpen = () => {
   pendingColdShow = AD_FREQUENCY.appOpenColdStart
   preloadAppOpen()
   appStateSub = AppState.addEventListener('change', (next) => {
-    if (next === 'active') showAppOpenIfAvailable()
+    // Ignore "active" events that are really the app coming back after a
+    // full-screen ad (interstitial or a previous App Open) closed — those
+    // aren't genuine user resumes.
+    if (next === 'active' && !isResumeFromAd()) {
+      showAppOpenIfAvailable()
+    }
   })
 }
 
