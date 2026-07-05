@@ -10,34 +10,42 @@ import { TestIds } from 'react-native-google-mobile-ads'
 //  the PROD ids below are used — paste your real AdMob unit ids there.
 // ─────────────────────────────────────────────────────────────
 
-// TODO: Replace every 'ca-app-pub-XXXX…/…' below with your real AdMob
-//       ad-unit ids from https://apps.admob.com (one per format, per
-//       platform). Also set your real App IDs in app.json → plugins →
-//       react-native-google-mobile-ads (androidAppId / iosAppId).
-const PROD = {
-  appOpen: Platform.select({
-    ios: 'ca-app-pub-0000000000000000/0000000001',
-    android: 'ca-app-pub-0000000000000000/0000000002',
-  }),
-  interstitial: Platform.select({
-    ios: 'ca-app-pub-0000000000000000/0000000003',
-    android: 'ca-app-pub-0000000000000000/0000000004',
-  }),
-  banner: Platform.select({
-    ios: 'ca-app-pub-0000000000000000/0000000005',
-    android: 'ca-app-pub-0000000000000000/0000000006',
-  }),
-  native: Platform.select({
-    ios: 'ca-app-pub-0000000000000000/0000000007',
-    android: 'ca-app-pub-0000000000000000/0000000008',
-  }),
-}
-
 const TEST = {
   appOpen: TestIds.APP_OPEN,
   interstitial: TestIds.INTERSTITIAL,
   banner: TestIds.ADAPTIVE_BANNER,
   native: TestIds.NATIVE,
+}
+
+// Real ad-unit ids come from environment variables so they never live in
+// git. Set them in a gitignored `.env` (local) and in EAS environment
+// variables (cloud) — see `.env.example`. Any id that isn't provided
+// falls back to the Google test id, so a missing var can never crash the
+// app (you'll just see a test ad instead of a live one).
+const pick = (ios, android, fallback) =>
+  (Platform.select({ ios, android }) || '').trim() || fallback
+
+const PROD = {
+  appOpen: pick(
+    process.env.EXPO_PUBLIC_ADMOB_IOS_APPOPEN,
+    process.env.EXPO_PUBLIC_ADMOB_ANDROID_APPOPEN,
+    TEST.appOpen,
+  ),
+  interstitial: pick(
+    process.env.EXPO_PUBLIC_ADMOB_IOS_INTERSTITIAL,
+    process.env.EXPO_PUBLIC_ADMOB_ANDROID_INTERSTITIAL,
+    TEST.interstitial,
+  ),
+  banner: pick(
+    process.env.EXPO_PUBLIC_ADMOB_IOS_BANNER,
+    process.env.EXPO_PUBLIC_ADMOB_ANDROID_BANNER,
+    TEST.banner,
+  ),
+  native: pick(
+    process.env.EXPO_PUBLIC_ADMOB_IOS_NATIVE,
+    process.env.EXPO_PUBLIC_ADMOB_ANDROID_NATIVE,
+    TEST.native,
+  ),
 }
 
 export const AD_UNITS = __DEV__ ? TEST : PROD
