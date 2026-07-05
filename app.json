@@ -101,7 +101,8 @@
         {
           "userTrackingPermission": "This identifier will be used to deliver personalized ads to you and keep the app free."
         }
-      ]
+      ],
+      "./plugins/withKotlinMetadataSkip"
     ],
     "extra": {
       "eas": {
