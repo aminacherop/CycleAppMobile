@@ -16,6 +16,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext'
 import { LanguageProvider, useLanguage } from './src/context/LanguageContext'
 import useAppData from './src/hooks/useAppData'
 import AnimatedSplash from './src/components/AnimatedSplash'
+import { AdsProvider, maybeShowInterstitial } from './src/ads'
 import Onboarding from './src/screens/Onboarding'
 import Dashboard from './src/screens/Dashboard'
 import PeriodPicker from './src/screens/PeriodPicker'
@@ -201,18 +202,38 @@ const AnalysisStackNavigator = ({ appData }) => (
 
 const TabNavigator = ({ appData }) => {
   const insets = useSafeAreaInsets()
-  const bottomPad = Math.max(insets.bottom, 12)
+  // Reserve the real system nav-bar / home-indicator inset SEPARATELY from a
+  // fixed content height, so the icon + label always get the same room on every
+  // phone and can never be clipped behind the gesture/button navigation bar.
+  const CONTENT_HEIGHT = 52
+  const TOP_PAD = 6
+  const bottomInset = Math.max(insets.bottom, 10)
 
   return (
   <Tab.Navigator
+    screenListeners={{
+      // Aggressive: attempt an interstitial on tab switches. The manager's
+      // frequency cap (every Nth action + time cooldown) throttles it so
+      // it stays policy-safe.
+      tabPress: () => { maybeShowInterstitial() },
+    }}
     screenOptions={({ route }) => ({
       headerShown: false,
-      tabBarStyle: [styles.tabBar, { paddingBottom: bottomPad, height: 52 + bottomPad }],
+      tabBarStyle: [
+        styles.tabBar,
+        {
+          height: CONTENT_HEIGHT + TOP_PAD + bottomInset,
+          paddingTop: TOP_PAD,
+          paddingBottom: bottomInset,
+        },
+      ],
       tabBarActiveTintColor: '#C2527A',
       tabBarInactiveTintColor: '#6B7280',
       tabBarLabelStyle: styles.tabLabel,
+      tabBarIconStyle: styles.tabIcon,
+      tabBarAllowFontScaling: false,
       tabBarIcon: () => (
-        <Text style={{ fontSize: route.name === 'Log' ? 28 : 22 }}>
+        <Text allowFontScaling={false} style={{ fontSize: route.name === 'Log' ? 28 : 22 }}>
           {ICONS[route.name]}
         </Text>
       ),
@@ -317,22 +338,24 @@ const AppContent = () => {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      <NavigationContainer ref={navigationRef}>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {!appData.isOnboarded ? (
-            <Stack.Screen name="Onboarding">
-              {() => <Onboarding onComplete={appData.completeOnboarding} />}
-            </Stack.Screen>
-          ) : (
-            <Stack.Screen name="Main">
-              {() => <TabNavigator appData={appData} />}
-            </Stack.Screen>
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
-    </View>
+    <AdsProvider suppressAppOpen={!appData.isOnboarded}>
+      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <NavigationContainer ref={navigationRef}>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            {!appData.isOnboarded ? (
+              <Stack.Screen name="Onboarding">
+                {() => <Onboarding onComplete={appData.completeOnboarding} />}
+              </Stack.Screen>
+            ) : (
+              <Stack.Screen name="Main">
+                {() => <TabNavigator appData={appData} />}
+              </Stack.Screen>
+            )}
+          </Stack.Navigator>
+        </NavigationContainer>
+      </View>
+    </AdsProvider>
   )
 }
 
@@ -371,12 +394,16 @@ const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: '#FFFFFF',
     borderTopColor: '#F2E4EA',
-    paddingBottom: 20,
-    paddingTop: 8,
-    height: 72,
+    // height / paddingTop / paddingBottom are set dynamically in TabNavigator
+    // from the safe-area insets so the bar never clips behind the nav bar.
   },
   tabLabel: {
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: '500',
+    marginTop: 2,
+  },
+  tabIcon: {
+    marginTop: 2,
   },
 })

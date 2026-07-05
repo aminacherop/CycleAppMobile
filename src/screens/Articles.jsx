@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TextInput,
   StyleSheet,
 } from 'react-native'
+import { NativeAdCard } from '../ads'
 import { useTheme } from '../context/ThemeContext'
 
 const articles = [
@@ -281,24 +282,27 @@ const Articles = ({ navigation }) => {
 
       {/* Article list */}
       <View style={{ gap: 10, marginTop: 16 }}>
-        {filtered.map(article => (
-          <TouchableOpacity
-            key={article.id}
-            style={[styles.articleCard, { backgroundColor: colors.white, borderColor: colors.border }]}
-            onPress={() => setSelectedArticle(article)}
-          >
-            <View style={[styles.articleIcon, { backgroundColor: article.color + '20' }]}>
-              <Text style={{ fontSize: 22 }}>{article.emoji}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.articleCategory, { color: article.color }]}>{article.category}</Text>
-              <Text style={[styles.articleTitle, { color: colors.textPrimary }]}>{article.title}</Text>
-              <Text style={[styles.articleSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>
-                {article.subtitle}
-              </Text>
-              <Text style={[styles.articleReadTime, { color: colors.textSecondary }]}>⏱ {article.readTime}</Text>
-            </View>
-          </TouchableOpacity>
+        {filtered.map((article, i) => (
+          <Fragment key={article.id}>
+            <TouchableOpacity
+              style={[styles.articleCard, { backgroundColor: colors.white, borderColor: colors.border }]}
+              onPress={() => setSelectedArticle(article)}
+            >
+              <View style={[styles.articleIcon, { backgroundColor: article.color + '20' }]}>
+                <Text style={{ fontSize: 22 }}>{article.emoji}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.articleCategory, { color: article.color }]}>{article.category}</Text>
+                <Text style={[styles.articleTitle, { color: colors.textPrimary }]}>{article.title}</Text>
+                <Text style={[styles.articleSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>
+                  {article.subtitle}
+                </Text>
+                <Text style={[styles.articleReadTime, { color: colors.textSecondary }]}>⏱ {article.readTime}</Text>
+              </View>
+            </TouchableOpacity>
+            {/* In-feed native ad after the 3rd article (highest-eCPM format) */}
+            {i === 2 && <NativeAdCard />}
+          </Fragment>
         ))}
       </View>
 

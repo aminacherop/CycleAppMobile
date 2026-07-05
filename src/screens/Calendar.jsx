@@ -12,6 +12,7 @@ import dayjs from 'dayjs'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import { SYMPTOM_CATEGORIES, getSymptomLabel as getLabel } from '../utils/symptomCategories'
+import { AdBanner } from '../ads'
 
 const { width } = Dimensions.get('window')
 const DAY_SIZE = (width - 32 - 12) / 7
@@ -419,6 +420,7 @@ const Calendar = ({ cycleSettings, setCycleSettings, dailyLogs, navigation, rout
         </View>
       )}
 
+      <AdBanner />
     </ScrollView>
   )
 }

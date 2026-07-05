@@ -19,6 +19,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { getUnreadNotificationCount } from '../utils/notifications'
 import { getSmartPredictions } from '../utils/cyclePrediction'
 import { getDailyInsight } from '../utils/dailyInsights'
+import { AdBanner } from '../ads'
 
 const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userProfile, todayLog, saveLog, dailyLogs, navigation }) => {
   const { colors, isDark, changeTheme } = useTheme()
@@ -683,6 +684,7 @@ const Dashboard = ({ cycleSettings, setCycleSettings, updateCycleSettings, userP
         </View>
       </View>
 
+      <AdBanner />
     </ScrollView>
 
       {/* Period Start Bottom Sheet */}

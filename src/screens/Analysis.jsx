@@ -18,6 +18,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { saveData, loadData } from '../utils/storage'
 import { getSymptomCorrelations, getCycleRegularitySummary } from '../utils/insightEngine'
 import { detectPeriodStartsFromLogs, calculateHistoricalCycleLengths } from '../utils/cyclePrediction'
+import { AdBanner } from '../ads'
 import {
   requestNotificationPermission,
   getNotificationPermission,
@@ -817,7 +818,7 @@ const Analysis = ({ cycleSettings, setCycleSettings, dailyLogs, installDate, nav
         </View>
       </Modal>
 
-
+      <AdBanner />
     </ScrollView>
   )
 }

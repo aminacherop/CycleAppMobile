@@ -6,15 +6,15 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Platform,
 } from 'react-native'
-import DateTimePicker from '@react-native-community/datetimepicker'
 import Slider from '@react-native-community/slider'
 import dayjs from 'dayjs'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import LanguagePicker from '../components/LanguagePicker'
+import CalendarDatePicker from '../components/CalendarDatePicker'
+import NumberPickerModal from '../components/NumberPickerModal'
 
 const Onboarding = ({ onComplete }) => {
   const { colors } = useTheme()
@@ -35,6 +35,8 @@ const Onboarding = ({ onComplete }) => {
 
   const [errors, setErrors] = useState({})
   const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showCyclePicker, setShowCyclePicker] = useState(false)
+  const [showPeriodPicker, setShowPeriodPicker] = useState(false)
 
   const conditionOptions = [
     { id: 'none', label: t('cond_none'), emoji: '✅' },
@@ -247,17 +249,22 @@ const Onboarding = ({ onComplete }) => {
               When did your last period start? *
             </Text>
             <TouchableOpacity
-              style={[styles.input, {
+              style={[styles.pickerField, {
                 borderColor: errors.lastPeriodStart ? colors.danger : colors.border,
                 backgroundColor: colors.white,
               }]}
+              activeOpacity={0.7}
               onPress={() => setShowDatePicker(true)}
             >
-              <Text style={{ color: data.lastPeriodStart ? colors.textPrimary : colors.textSecondary }}>
+              <Text style={styles.pickerIcon}>📅</Text>
+              <Text style={[styles.pickerValue, {
+                color: data.lastPeriodStart ? colors.textPrimary : colors.textSecondary,
+              }]}>
                 {data.lastPeriodStart
                   ? dayjs(data.lastPeriodStart).format('MMMM D, YYYY')
                   : 'Tap to select date'}
               </Text>
+              <Text style={[styles.pickerChevron, { color: colors.textSecondary }]}>▾</Text>
             </TouchableOpacity>
             {errors.lastPeriodStart && (
               <Text style={[styles.errorText, { color: colors.danger }]}>
@@ -265,31 +272,31 @@ const Onboarding = ({ onComplete }) => {
               </Text>
             )}
 
-            {showDatePicker && (
-              <DateTimePicker
-                value={data.lastPeriodStart ? new Date(data.lastPeriodStart) : new Date()}
-                mode="date"
-                maximumDate={new Date()}
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(Platform.OS === 'ios')
-                  if (selectedDate) {
-                    setData(prev => ({
-                      ...prev,
-                      lastPeriodStart: dayjs(selectedDate).format('YYYY-MM-DD'),
-                    }))
-                    setErrors(prev => ({ ...prev, lastPeriodStart: '' }))
-                  }
-                }}
-              />
-            )}
+            <CalendarDatePicker
+              visible={showDatePicker}
+              value={data.lastPeriodStart}
+              maximumDate={new Date()}
+              onClose={() => setShowDatePicker(false)}
+              onSelect={(dateString) => {
+                setData(prev => ({ ...prev, lastPeriodStart: dateString }))
+                setErrors(prev => ({ ...prev, lastPeriodStart: '' }))
+              }}
+            />
           </View>
 
           <View style={styles.formGroup}>
             <View style={styles.sliderLabelRow}>
               <Text style={[styles.label, { color: colors.textPrimary }]}>{t('cycle_length')}</Text>
-              <Text style={[styles.sliderValue, { color: colors.pink }]}>
-                {data.cycleLength} days
-              </Text>
+              <TouchableOpacity
+                style={[styles.valuePill, { backgroundColor: colors.pinkLight }]}
+                activeOpacity={0.7}
+                onPress={() => setShowCyclePicker(true)}
+              >
+                <Text style={[styles.valuePillText, { color: colors.pinkDark }]}>
+                  {data.cycleLength} {t('days') || 'days'}
+                </Text>
+                <Text style={[styles.valuePillChevron, { color: colors.pinkDark }]}>▾</Text>
+              </TouchableOpacity>
             </View>
             <Slider
               minimumValue={21}
@@ -306,9 +313,16 @@ const Onboarding = ({ onComplete }) => {
           <View style={styles.formGroup}>
             <View style={styles.sliderLabelRow}>
               <Text style={[styles.label, { color: colors.textPrimary }]}>{t('period_length')}</Text>
-              <Text style={[styles.sliderValue, { color: colors.pink }]}>
-                {data.periodLength} days
-              </Text>
+              <TouchableOpacity
+                style={[styles.valuePill, { backgroundColor: colors.pinkLight }]}
+                activeOpacity={0.7}
+                onPress={() => setShowPeriodPicker(true)}
+              >
+                <Text style={[styles.valuePillText, { color: colors.pinkDark }]}>
+                  {data.periodLength} {t('days') || 'days'}
+                </Text>
+                <Text style={[styles.valuePillChevron, { color: colors.pinkDark }]}>▾</Text>
+              </TouchableOpacity>
             </View>
             <Slider
               minimumValue={2}
@@ -321,6 +335,27 @@ const Onboarding = ({ onComplete }) => {
               onValueChange={value => setData(prev => ({ ...prev, periodLength: value }))}
             />
           </View>
+
+          <NumberPickerModal
+            visible={showCyclePicker}
+            title={t('cycle_length')}
+            min={21}
+            max={45}
+            value={data.cycleLength}
+            unit={t('days') || 'days'}
+            onSelect={value => setData(prev => ({ ...prev, cycleLength: value }))}
+            onClose={() => setShowCyclePicker(false)}
+          />
+          <NumberPickerModal
+            visible={showPeriodPicker}
+            title={t('period_length')}
+            min={2}
+            max={10}
+            value={data.periodLength}
+            unit={t('days') || 'days'}
+            onSelect={value => setData(prev => ({ ...prev, periodLength: value }))}
+            onClose={() => setShowPeriodPicker(false)}
+          />
 
           {data.lastPeriodStart && (
             <View style={[styles.previewCard, { backgroundColor: colors.white, borderColor: colors.border }]}>
@@ -514,6 +549,42 @@ const makeStyles = (colors) => StyleSheet.create({
     borderRadius: 12,
     fontSize: 15,
   },
+  pickerField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1.5,
+    borderRadius: 12,
+  },
+  pickerIcon: {
+    fontSize: 18,
+  },
+  pickerValue: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  pickerChevron: {
+    fontSize: 14,
+  },
+  valuePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  valuePillText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  valuePillChevron: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
   errorText: {
     fontSize: 12,
     marginTop: 4,
@@ -538,7 +609,8 @@ const makeStyles = (colors) => StyleSheet.create({
   sliderLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    alignItems: 'center',
+    marginBottom: 10,
   },
   sliderValue: {
     fontSize: 16,

@@ -41,6 +41,23 @@ const scheduleNotification = async (id, title, body, triggerDate, data = {}) => 
   }
 }
 
+// Repeating reminder that fires every day at a fixed LOCAL hour:minute.
+// The OS re-evaluates the local time each day, so it stays correct across
+// DST changes and timezone travel without needing to be rescheduled.
+const scheduleDailyNotification = async (id, title, body, hour, minute, data = {}) => {
+  const h = Math.max(0, Math.min(23, Math.floor(Number(hour) || 0)))
+  const m = Math.max(0, Math.min(59, Math.floor(Number(minute) || 0)))
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: id,
+      content: { title, body, sound: true, data },
+      trigger: { type: 'daily', hour: h, minute: m },
+    })
+  } catch (err) {
+    console.error('Schedule error:', err)
+  }
+}
+
 export const scheduleAllReminders = async (cycleSettings, prefs) => {
   await cancelAllNotifications()
   const { cycleLength = 28, lastPeriodStart } = cycleSettings
@@ -86,19 +103,17 @@ export const scheduleAllReminders = async (cycleSettings, prefs) => {
   if (prefs.dailyReminder) {
     const hour = prefs.dailyReminderHour != null ? prefs.dailyReminderHour : (prefs.dailyReminderTime || 20)
     const minute = prefs.dailyReminderMinute || 0
-    const reminderDate = today.hour(hour).minute(minute).second(0)
-    await scheduleNotification('daily-log', '📝 Daily log reminder',
+    await scheduleDailyNotification('daily-log', '📝 Daily log reminder',
       "Don't forget to log your mood and symptoms today!",
-      reminderDate.isAfter(today) ? reminderDate.toDate() : reminderDate.add(1, 'day').toDate(),
+      hour, minute,
       { screen: 'Log', type: 'daily_log' })
   }
   if (prefs.waterReminder) {
     const waterHour = prefs.waterReminderHour != null ? prefs.waterReminderHour : 11
     const waterMinute = prefs.waterReminderMinute || 0
-    const waterReminderDate = today.hour(waterHour).minute(waterMinute).second(0)
-    await scheduleNotification('water-reminder', '💧 Stay hydrated',
+    await scheduleDailyNotification('water-reminder', '💧 Stay hydrated',
       'Time to drink some water!',
-      waterReminderDate.isAfter(today) ? waterReminderDate.toDate() : waterReminderDate.add(1, 'day').toDate(),
+      waterHour, waterMinute,
       { screen: 'Log', type: 'water' })
   }
 }
@@ -106,26 +121,28 @@ export const scheduleAllReminders = async (cycleSettings, prefs) => {
 export const scheduleMedicationReminders = async (medications) => {
   const perm = await getNotificationPermission()
   if (perm !== 'granted') return
+  const today = dayjs()
   for (const med of medications) {
     if (!med.active || !med.reminderTime) continue
     const [hour, minute] = med.reminderTime.split(':').map(Number)
-    const today = dayjs()
     const startDate = med.startDate ? dayjs(med.startDate) : today
 
-    let t = startDate.hour(hour).minute(minute).second(0)
-    // If the start date's reminder time has already passed today
-    // (or the start date is in the past), push forward to the next
-    // valid occurrence — either later today or tomorrow.
-    if (t.isBefore(today)) {
-      const todayAtTime = today.hour(hour).minute(minute).second(0)
-      t = todayAtTime.isBefore(today) ? todayAtTime.add(1, 'day') : todayAtTime
+    if (startDate.isAfter(today, 'day')) {
+      // Course hasn't started yet — fire a one-shot at the start date's time.
+      // (It'll be re-armed as a repeating reminder on the next reschedule.)
+      await scheduleNotification(`med-${med.id}`,
+        `💊 Time for your ${med.name}`,
+        `Don't forget to take your ${med.name} today!`,
+        startDate.hour(hour).minute(minute).second(0).toDate(),
+        { screen: 'Medications', type: 'medication', medicationId: med.id })
+    } else {
+      // Already started — repeat every day at the chosen local time.
+      await scheduleDailyNotification(`med-${med.id}`,
+        `💊 Time for your ${med.name}`,
+        `Don't forget to take your ${med.name} today!`,
+        hour, minute,
+        { screen: 'Medications', type: 'medication', medicationId: med.id })
     }
-
-    await scheduleNotification(`med-${med.id}`,
-      `💊 Time for your ${med.name}`,
-      `Don't forget to take your ${med.name} today!`,
-      t.toDate(),
-      { screen: 'Medications', type: 'medication', medicationId: med.id })
   }
 }
 
