@@ -2,7 +2,7 @@
   "expo": {
     "name": "Period Tracker",
     "slug": "cycleapp",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -23,7 +23,14 @@
       "package": "com.mycycleapp.periodtracker"
     },
     "plugins": [
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#C2527A",
+          "defaultChannel": "reminders"
+        }
+      ],
       "@react-native-community/datetimepicker",
       "expo-localization",
       [
@@ -32,7 +39,7 @@
           "android": {
             "enableProguardInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "extraProguardRules": "-keep class com.google.android.gms.ads.** { *; }\n-keep class com.google.ads.** { *; }\n-keep public class com.google.android.gms.ads.MobileAds { public *; }\n-dontwarn com.google.android.gms.ads.**"
+            "extraProguardRules": "-keep class com.google.android.gms.ads.** { *; }\n-keep class com.google.ads.** { *; }\n-keep public class com.google.android.gms.ads.MobileAds { public *; }\n-dontwarn com.google.android.gms.ads.**\n# expo-notifications persists scheduled notifications with Java serialization;\n# R8 must keep the custom writeObject/readObject hooks or scheduling fails\n# in release builds (NotSerializableException: org.json.JSONObject).\n-keep class expo.modules.notifications.** { *; }\n-keepclassmembers class * implements java.io.Serializable {\n    static final long serialVersionUID;\n    private static final java.io.ObjectStreamField[] serialPersistentFields;\n    private void writeObject(java.io.ObjectOutputStream);\n    private void readObject(java.io.ObjectInputStream);\n    java.lang.Object writeReplace();\n    java.lang.Object readResolve();\n}"
           }
         }
       ],

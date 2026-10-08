@@ -1,417 +1,336 @@
-import { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  Modal,
-} from 'react-native'
+import { useCallback, useState } from 'react'
+import { Alert, View, StyleSheet } from 'react-native'
+import { useFocusEffect } from '@react-navigation/native'
 import dayjs from 'dayjs'
-import DateTimePicker from '@react-native-community/datetimepicker'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
 import {
-  MEDICATION_TYPES,
-  loadMedications,
-  addMedication,
-  updateMedication,
-  deleteMedication,
-  loadMedicationLogs,
-  logMedicationTaken,
-  calculateAdherence,
-  calculateStreak,
-} from '../utils/medications'
+  Screen, AppText, Button, Card, Chip, EmptyState, FadeIn, IconBadge, ListGroup, ListRow, Sheet, Tap, Icon,
+} from '../components/ui'
 import {
-  scheduleMedicationReminders,
-  requestNotificationPermission,
-} from '../utils/notifications'
+  MEDICATION_TYPES, loadMedications, addMedication, updateMedication, deleteMedication,
+  loadMedicationLogs, logMedicationTaken, calculateAdherence, calculateStreak, syncMedicationReminders,
+} from '../utils/medications'
+import { requestNotificationPermission } from '../utils/notifications'
+import { formatDate, parseDate } from '../utils/dates'
+import { successHaptic, warningHaptic } from '../utils/haptics'
+import { BackHeader, Field, formatTime, timeToDate, usePicker } from './profile/shared'
+
+// Icon + tone per medication type (no emoji in the UI).
+const TYPE_STYLE = {
+  birth_control: { icon: 'pill', tone: 'primary', key: 'pf_med_birth_control' },
+  folic_acid: { icon: 'leaf', tone: 'fertile', key: 'pf_med_folic_acid' },
+  iron: { icon: 'drop', tone: 'period', key: 'pf_med_iron' },
+  vitamin_d: { icon: 'sun', tone: 'warning', key: 'pf_med_vitamin_d' },
+  calcium: { icon: 'bolt', tone: 'info', key: 'pf_med_calcium' },
+  magnesium: { icon: 'moon', tone: 'ovulation', key: 'pf_med_magnesium' },
+  painkiller: { icon: 'bolt', tone: 'success', key: 'pf_med_painkiller' },
+  prenatal: { icon: 'baby', tone: 'primary', key: 'pf_med_prenatal' },
+  other: { icon: 'pill', tone: 'info', key: 'pf_med_other' },
+}
+const typeStyle = (id) => TYPE_STYLE[id] || TYPE_STYLE.other
+const TYPE_IDS = (MEDICATION_TYPES || []).map(m => m.id).filter(id => TYPE_STYLE[id])
+
+const parseHHMM = (s) => {
+  if (typeof s !== 'string' || !/^\d{1,2}:\d{1,2}$/.test(s)) return { hour: 8, minute: 0 }
+  const [hour, minute] = s.split(':').map(Number)
+  return { hour, minute }
+}
+const toHHMM = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+
+const blankMed = () => ({ type: 'birth_control', name: '', reminderTime: '08:00', dosage: '', startDate: dayjs().format('YYYY-MM-DD') })
 
 const Medications = ({ navigation }) => {
   const { colors } = useTheme()
-  const insets = useSafeAreaInsets()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  const picker = usePicker()
   const [medications, setMedications] = useState([])
   const [todayLogs, setTodayLogs] = useState({})
+  const [stats, setStats] = useState({})
   const [loading, setLoading] = useState(true)
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [showTimePicker, setShowTimePicker] = useState(false)
-  const [adherenceData, setAdherenceData] = useState({})
-  const [streakData, setStreakData] = useState({})
-
-  const [newMed, setNewMed] = useState({
-    type: 'birth_control',
-    name: '',
-    reminderTime: '08:00',
-    dosage: '',
-    startDate: dayjs().format('YYYY-MM-DD'),
-  })
-  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [showAdd, setShowAdd] = useState(false)
+  const [newMed, setNewMed] = useState(blankMed)
+  const [nameTouched, setNameTouched] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const today = dayjs().format('YYYY-MM-DD')
 
-  useEffect(() => {
-    loadAll()
-  }, [])
-
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     try {
-      setLoading(true)
-      const meds = await loadMedications()
-      const logs = await loadMedicationLogs()
-      const medsArr = Array.isArray(meds) ? meds : []
-      setMedications(medsArr)
-
-      const todayStatus = {}
-      medsArr.forEach(med => {
-        todayStatus[med.id] = logs?.[`${med.id}_${today}`]?.taken || false
-      })
-      setTodayLogs(todayStatus)
-
-      const adherence = {}
-      const streaks = {}
-      for (const med of medsArr) {
-        adherence[med.id] = await calculateAdherence(med.id, 30)
-        streaks[med.id] = await calculateStreak(med.id)
-      }
-      setAdherenceData(adherence)
-      setStreakData(streaks)
+      const [meds, logs] = await Promise.all([loadMedications(), loadMedicationLogs()])
+      const list = (Array.isArray(meds) ? meds : []).filter(m => m && m.id != null)
+      setMedications(list)
+      const status = {}
+      list.forEach(m => { status[m.id] = !!logs?.[`${m.id}_${today}`]?.taken })
+      setTodayLogs(status)
+      const entries = await Promise.all(list.map(async m => {
+        const [adherence, streak] = await Promise.all([
+          calculateAdherence(m.id, 30).catch(() => null),
+          calculateStreak(m.id).catch(() => 0),
+        ])
+        return [m.id, { adherence, streak }]
+      }))
+      setStats(Object.fromEntries(entries))
     } catch (err) {
       console.error('Error loading medications:', err)
     } finally {
       setLoading(false)
     }
+  }, [today])
+
+  useFocusEffect(useCallback(() => { loadAll() }, [loadAll]))
+
+  const resync = () => syncMedicationReminders(t).catch(() => {})
+
+  const toggleTaken = async (id) => {
+    const next = !todayLogs[id]
+    setTodayLogs(prev => ({ ...prev, [id]: next }))
+    if (next) successHaptic()
+    try {
+      await logMedicationTaken(id, today, next)
+      loadAll()
+    } catch (e) {
+      console.warn('Log medication failed', e)
+    }
   }
 
-  const handleToggleTaken = async (medId) => {
-    const newStatus = !todayLogs[medId]
-    await logMedicationTaken(medId, today, newStatus)
-    setTodayLogs(prev => ({ ...prev, [medId]: newStatus }))
-    await loadAll()
+  const add = async () => {
+    const name = newMed.name.trim()
+    setNameTouched(true)
+    if (!name) return
+    setSaving(true)
+    try {
+      let granted = false
+      try { granted = await requestNotificationPermission() } catch {}
+      await addMedication({ ...newMed, name })
+      if (granted) await resync()
+      setShowAdd(false)
+      setNewMed(blankMed())
+      setNameTouched(false)
+      await loadAll()
+    } catch (e) {
+      console.warn('Add medication failed', e)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleAddMedication = async () => {
-    if (!newMed.name.trim()) return
-    const granted = await requestNotificationPermission()
-    const updated = await addMedication(newMed)
-    setMedications(Array.isArray(updated) ? updated : [])
-    if (granted) await scheduleMedicationReminders(updated)
-    setShowAddModal(false)
-    setNewMed({ type: 'birth_control', name: '', reminderTime: '08:00', dosage: '', startDate: dayjs().format('YYYY-MM-DD') })
-    await loadAll()
+  // Pause/resume go through updateMedication, which cancels / re-arms the reminder.
+  const toggleActive = async (med) => {
+    try {
+      await updateMedication(med.id, { active: !med.active })
+      if (!med.active) await resync() // re-arm with localized text
+      await loadAll()
+    } catch (e) {
+      console.warn('Pause/resume failed', e)
+    }
   }
 
-  const handleDelete = async (medId) => {
-    const updated = await deleteMedication(medId)
-    setMedications(Array.isArray(updated) ? updated : [])
+  // Delete goes through deleteMedication, which cancels the reminder.
+  const remove = (med) => {
+    warningHaptic()
+    Alert.alert(t('pf_med_delete_title'), t('pf_med_delete_body', { name: med.name || '' }), [
+      { text: t('cancel'), style: 'cancel' },
+      {
+        text: t('delete'),
+        style: 'destructive',
+        onPress: async () => {
+          try { await deleteMedication(med.id) } catch (e) { console.warn('Delete failed', e) }
+          loadAll()
+        },
+      },
+    ])
   }
-
-  const handleToggleActive = async (medId, active) => {
-    const updated = await updateMedication(medId, { active: !active })
-    setMedications(Array.isArray(updated) ? updated : [])
-    if (!active) await scheduleMedicationReminders(updated)
-  }
-
-  const getTypeInfo = (typeId) =>
-    MEDICATION_TYPES.find(t => t.id === typeId) || MEDICATION_TYPES[MEDICATION_TYPES.length - 1]
 
   const activeMeds = medications.filter(m => m.active)
   const takenCount = activeMeds.filter(m => todayLogs[m.id]).length
   const allTaken = activeMeds.length > 0 && takenCount === activeMeds.length
 
-  const styles = makeStyles(colors)
-
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <Text style={{ fontSize: 40 }}>💊</Text>
-        <Text style={{ color: colors.textSecondary, marginTop: 10 }}>{t('loading')}</Text>
-      </View>
-    )
-  }
+  const openAdd = () => { setNewMed(blankMed()); setNameTouched(false); setShowAdd(true) }
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.scrollContent}
-    >
-      <TouchableOpacity activeOpacity={0.6} style={styles.backBtn} onPress={() => navigation.goBack()}>
-        <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>← {t('back')}</Text>
-      </TouchableOpacity>
-      <Text style={[styles.title, { color: colors.textPrimary }]}>{t('pills_supplements')}</Text>
-      <Text style={[styles.sub, { color: colors.textSecondary }]}>
-        {activeMeds.length} {activeMeds.length !== 1 ? t('active_reminders_plural') : t('active_reminders')}
-      </Text>
+    <Screen header={<BackHeader navigation={navigation} title={t('pf_pills')} subtitle={loading ? null : t('pf_med_active_n', { n: activeMeds.length })} />}>
+      {loading ? null : medications.length === 0 ? (
+        <FadeIn index={0}>
+          <EmptyState
+            icon="pill" tone="success"
+            title={t('no_medications_yet')}
+            body={t('no_medications_desc')}
+            actionLabel={t('pf_med_add')}
+            onAction={openAdd}
+          />
+        </FadeIn>
+      ) : (
+        <>
+          {activeMeds.length > 0 ? (
+            <FadeIn index={0}>
+              <Card style={[{ marginTop: 4 }, allTaken && { backgroundColor: colors.successSoft, borderColor: colors.successSoft }]}>
+                <View style={styles.row}>
+                  <IconBadge name={allTaken ? 'check' : 'pill'} tone={allTaken ? 'success' : 'primary'} size={44} />
+                  <View style={{ flex: 1 }}>
+                    <AppText variant="subheading">{allTaken ? t('all_done_today') : t('todays_medications')}</AppText>
+                    <AppText variant="caption" muted>{t('pf_med_taken_n', { n: takenCount, total: activeMeds.length })}</AppText>
+                  </View>
+                </View>
+              </Card>
+            </FadeIn>
+          ) : null}
 
-      {/* Today status */}
-      {medications.length > 0 && (
-        <View style={[styles.todayCard, { backgroundColor: allTaken ? colors.pinkLight : colors.white, borderColor: colors.border }]}>
-          <Text style={{ fontSize: 30 }}>{allTaken ? '🎉' : '💊'}</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.todayTitle, { color: colors.textPrimary }]}>
-              {allTaken ? t('all_done_today') : t('todays_medications')}
-            </Text>
-            <Text style={[styles.todayDesc, { color: colors.textSecondary }]}>
-              {takenCount} {t('of')} {activeMeds.length} {t('taken_of')}
-            </Text>
+          <View style={{ gap: 10, marginTop: 14 }}>
+            {medications.map((med, i) => {
+              const ts = typeStyle(med.type)
+              const taken = !!todayLogs[med.id]
+              const st = stats[med.id] || {}
+              const meta = [
+                med.dosage ? String(med.dosage) : null,
+                formatTime(parseHHMM(med.reminderTime), language),
+                parseDate(med.startDate) && med.startDate > today ? t('pf_med_from', { date: formatDate(med.startDate, 'MMM D', language) }) : null,
+              ].filter(Boolean).join(' · ')
+              return (
+                <FadeIn key={med.id} index={i + 1}>
+                  <Card style={!med.active && { opacity: 0.6 }}>
+                    <View style={styles.row}>
+                      <IconBadge name={ts.icon} tone={ts.tone} size={42} />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <AppText variant="subheading" numberOfLines={1}>{med.name || t(ts.key)}</AppText>
+                        <AppText variant="caption" muted numberOfLines={2}>{meta}</AppText>
+                      </View>
+                      {med.active ? (
+                        <Tap
+                          onPress={() => toggleTaken(med.id)}
+                          haptic
+                          scaleTo={0.9}
+                          accessibilityRole="checkbox"
+                          accessibilityState={{ checked: taken }}
+                          accessibilityLabel={t('pf_med_mark_taken', { name: med.name || t(ts.key) })}
+                          hitSlop={6}
+                          style={[styles.check, { borderColor: taken ? colors.success : colors.border, backgroundColor: taken ? colors.success : 'transparent' }]}
+                        >
+                          {taken ? <Icon name="check" size={18} color={colors.onPrimary} /> : null}
+                        </Tap>
+                      ) : null}
+                    </View>
+
+                    {(st.streak > 0 || st.adherence != null || !med.active) ? (
+                      <View style={styles.tags}>
+                        {!med.active ? <Tag tone="neutral" text={t('pf_med_paused')} /> : null}
+                        {st.streak > 0 ? <Tag tone="warning" text={t('pf_med_streak', { n: st.streak })} /> : null}
+                        {st.adherence != null ? <Tag tone="primary" text={t('pf_med_adherence', { n: st.adherence })} /> : null}
+                      </View>
+                    ) : null}
+
+                    <View style={styles.actions}>
+                      <Button
+                        title={med.active ? t('pf_med_pause') : t('pf_med_resume')}
+                        variant="secondary" size="sm" icon={med.active ? 'clock' : 'refresh'}
+                        onPress={() => toggleActive(med)} style={{ flex: 1 }}
+                      />
+                      <Button
+                        title={t('delete')} variant="danger" size="sm" icon="trash"
+                        onPress={() => remove(med)} style={{ flex: 1 }}
+                      />
+                    </View>
+                  </Card>
+                </FadeIn>
+              )
+            })}
           </View>
-        </View>
+
+          <Button title={t('pf_med_add')} icon="plus" variant="soft" onPress={openAdd} style={{ marginTop: 16 }} />
+        </>
       )}
 
-      {/* Empty state */}
-      {medications.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Text style={{ fontSize: 48 }}>💊</Text>
-          <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>{t('no_medications_yet')}</Text>
-          <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
-            {t('no_medications_desc')}
-          </Text>
-          <TouchableOpacity
-            style={[styles.emptyAddBtn, { backgroundColor: colors.pink }]}
-            onPress={() => setShowAddModal(true)}
-          >
-            <Text style={styles.emptyAddBtnText}>{t('add_first_medication')}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={{ gap: 10, marginBottom: 16 }}>
-          {medications.map(med => {
-            const typeInfo = getTypeInfo(med.type)
-            const taken = todayLogs[med.id]
-            const adherence = adherenceData[med.id]
-            const streak = streakData[med.id]
-
+      <Sheet visible={showAdd} onClose={() => setShowAdd(false)} title={t('pf_med_add')}>
+        <AppText variant="overline" muted style={{ marginBottom: 8 }}>{t('pf_med_type')}</AppText>
+        <View style={styles.types}>
+          {TYPE_IDS.map(id => {
+            const ts = typeStyle(id)
             return (
-              <View
-                key={med.id}
-                style={[styles.medCard, { backgroundColor: colors.white, borderColor: colors.border, opacity: med.active ? 1 : 0.5 }]}
-              >
-                <View style={styles.medTop}>
-                  <View style={[styles.medIcon, { backgroundColor: typeInfo.color + '20' }]}>
-                    <Text style={{ fontSize: 20 }}>{typeInfo.emoji}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.medName, { color: colors.textPrimary }]}>{med.name}</Text>
-                    <Text style={[styles.medMeta, { color: colors.textSecondary }]}>
-                      {typeInfo.label}{med.dosage ? ` · ${med.dosage}` : ''} · ⏰ {dayjs(`2000-01-01T${med.reminderTime}`).format('h:mm A')}{med.startDate ? ` · from ${dayjs(med.startDate).format('MMM D')}` : ''}
-                    </Text>
-                  </View>
-                  {med.active && (
-                    <TouchableOpacity
-                      style={[
-                        styles.checkBtn,
-                        { borderColor: colors.border, backgroundColor: taken ? '#10B981' : 'transparent' },
-                      ]}
-                      onPress={() => handleToggleTaken(med.id)}
-                    >
-                      {taken && <Text style={{ color: 'white', fontWeight: '700' }}>✓</Text>}
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                <View style={styles.statsRow}>
-                  {streak > 0 && (
-                    <View style={[styles.statTag, { backgroundColor: '#FEF3C7' }]}>
-                      <Text style={{ color: '#92400E', fontSize: 11, fontWeight: '600' }}>🔥 {streak}{t('day_streak')}</Text>
-                    </View>
-                  )}
-                  {adherence !== null && (
-                    <View style={[styles.statTag, { backgroundColor: colors.pinkLight }]}>
-                      <Text style={{ color: colors.pinkDark, fontSize: 11, fontWeight: '600' }}>📊 {adherence}%</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.actionsRow}>
-                  <TouchableOpacity
-                    style={[styles.actionBtn, { borderColor: colors.border }]}
-                    onPress={() => handleToggleActive(med.id, med.active)}
-                  >
-                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                      {med.active ? t('pause') : t('resume')}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.actionBtn, { borderColor: '#EF4444' }]}
-                    onPress={() => handleDelete(med.id)}
-                  >
-                    <Text style={{ color: '#EF4444', fontSize: 12 }}>🗑 {t('delete')}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              <Chip
+                key={id}
+                label={t(ts.key)}
+                icon={ts.icon}
+                tone={ts.tone}
+                selected={newMed.type === id}
+                onPress={() => setNewMed(prev => {
+                  // Prefill the name from the type unless the user typed their own.
+                  const prevLabel = t(typeStyle(prev.type).key)
+                  const name = !prev.name.trim() || prev.name === prevLabel ? (id === 'other' ? '' : t(ts.key)) : prev.name
+                  return { ...prev, type: id, name }
+                })}
+              />
             )
           })}
         </View>
-      )}
-
-      <TouchableOpacity
-        style={[styles.addBtn, { borderColor: colors.pinkMid, backgroundColor: colors.white }]}
-        onPress={() => setShowAddModal(true)}
-      >
-        <Text style={{ color: colors.pink, fontWeight: '600', fontSize: 14 }}>
-          {t('add_pill_supplement')}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Add Modal */}
-      <Modal visible={showAddModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: colors.white, paddingBottom: 20 + insets.bottom }]}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{t('add_medication_title')}</Text>
-
-              <View style={styles.typeGrid}>
-                {MEDICATION_TYPES.map(type => (
-                  <TouchableOpacity
-                    key={type.id}
-                    style={[
-                      styles.typeBtn,
-                      {
-                        borderColor: newMed.type === type.id ? type.color : colors.border,
-                        backgroundColor: newMed.type === type.id ? type.color + '15' : colors.background,
-                      },
-                    ]}
-                    onPress={() => setNewMed(prev => ({
-                      ...prev, type: type.id, name: prev.name || type.label,
-                    }))}
-                  >
-                    <Text style={{ fontSize: 18 }}>{type.emoji}</Text>
-                    <Text style={{ fontSize: 10, color: colors.textSecondary, textAlign: 'center' }}>
-                      {type.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={[styles.label, { color: colors.textPrimary }]}>{t('name_required')}</Text>
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
-                placeholder={t("name_med_placeholder")}
-                placeholderTextColor={colors.textSecondary}
-                value={newMed.name}
-                onChangeText={t => setNewMed(prev => ({ ...prev, name: t }))}
-              />
-
-              <Text style={[styles.label, { color: colors.textPrimary }]}>{t('dosage')}</Text>
-              <TextInput
-                style={[styles.input, { borderColor: colors.border, color: colors.textPrimary, backgroundColor: colors.background }]}
-                placeholder={t("dosage_placeholder")}
-                placeholderTextColor={colors.textSecondary}
-                value={newMed.dosage}
-                onChangeText={t => setNewMed(prev => ({ ...prev, dosage: t }))}
-              />
-
-              <Text style={[styles.label, { color: colors.textPrimary }]}>{t('start_date')}</Text>
-              <TouchableOpacity
-                style={[styles.input, { borderColor: colors.border, backgroundColor: colors.background, justifyContent: 'center' }]}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={{ color: colors.textPrimary, fontSize: 16 }}>
-                  {dayjs(newMed.startDate).format('MMM D, YYYY')}
-                </Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={dayjs(newMed.startDate).toDate()}
-                  mode="date"
-                  minimumDate={new Date()}
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(false)
-                    if (selectedDate) {
-                      const formatted = dayjs(selectedDate).format('YYYY-MM-DD')
-                      setNewMed(prev => ({ ...prev, startDate: formatted }))
-                    }
-                  }}
-                />
-              )}
-
-              <Text style={[styles.label, { color: colors.textPrimary }]}>{t('reminder_time')}</Text>
-              <TouchableOpacity
-                style={[styles.input, { borderColor: colors.border, backgroundColor: colors.background, justifyContent: 'center' }]}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <Text style={{ color: colors.textPrimary, fontSize: 16 }}>
-                  {dayjs(`2000-01-01T${newMed.reminderTime}`).format('h:mm A')}
-                </Text>
-              </TouchableOpacity>
-              {showTimePicker && (
-                <DateTimePicker
-                  value={dayjs(`2000-01-01T${newMed.reminderTime}`).toDate()}
-                  mode="time"
-                  is24Hour={false}
-                  onChange={(event, selectedDate) => {
-                    setShowTimePicker(false)
-                    if (selectedDate) {
-                      const formatted = dayjs(selectedDate).format('HH:mm')
-                      setNewMed(prev => ({ ...prev, reminderTime: formatted }))
-                    }
-                  }}
-                />
-              )}
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  style={[styles.modalCancel, { borderColor: colors.border }]}
-                  onPress={() => setShowAddModal(false)}
-                >
-                  <Text style={{ color: colors.textSecondary }}>{t('cancel')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalSave, { backgroundColor: newMed.name.trim() ? colors.pink : colors.border }]}
-                  onPress={handleAddMedication}
-                  disabled={!newMed.name.trim()}
-                >
-                  <Text style={{ color: 'white', fontWeight: '700' }}>{t('add_reminder_btn')}</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-    </ScrollView>
+        <Field
+          label={t('pf_med_name')}
+          value={newMed.name}
+          onChangeText={(v) => setNewMed(prev => ({ ...prev, name: v }))}
+          placeholder={t('name_med_placeholder')}
+          maxLength={40}
+          error={nameTouched && !newMed.name.trim() ? t('pf_name_required') : null}
+          style={{ marginTop: 14 }}
+        />
+        <Field
+          label={t('pf_med_dosage')}
+          value={newMed.dosage}
+          onChangeText={(v) => setNewMed(prev => ({ ...prev, dosage: v }))}
+          placeholder={t('dosage_placeholder')}
+          maxLength={30}
+          style={{ marginTop: 12 }}
+        />
+        <ListGroup style={{ marginTop: 14 }}>
+          <ListRow
+            icon="clock" tone="primary"
+            title={t('pf_med_reminder_time')}
+            value={formatTime(parseHHMM(newMed.reminderTime), language)}
+            onPress={() => picker.open({
+              mode: 'time',
+              title: t('pf_med_reminder_time'),
+              value: timeToDate(parseHHMM(newMed.reminderTime)),
+              is24Hour: language !== 'en',
+              onPick: (d) => setNewMed(prev => ({ ...prev, reminderTime: toHHMM(d) })),
+            })}
+          />
+          <ListRow
+            icon="calendar" tone="info"
+            title={t('pf_med_start')}
+            value={formatDate(newMed.startDate, 'MMM D, YYYY', language)}
+            onPress={() => picker.open({
+              mode: 'date',
+              title: t('pf_med_start'),
+              value: parseDate(newMed.startDate)?.toDate() || new Date(),
+              minimumDate: dayjs().subtract(1, 'year').toDate(),
+              maximumDate: dayjs().add(1, 'year').toDate(),
+              onPick: (d) => setNewMed(prev => ({ ...prev, startDate: dayjs(d).format('YYYY-MM-DD') })),
+            })}
+          />
+        </ListGroup>
+        <Button title={t('pf_med_save')} onPress={add} loading={saving} style={{ marginTop: 18 }} />
+        {picker.element}
+      </Sheet>
+    </Screen>
   )
 }
 
-const makeStyles = (colors) => StyleSheet.create({
-  backBtn: { paddingVertical: 8, marginBottom: 4 },
-  backBtnText: { fontSize: 14 },
-  container: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 60 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 22, fontWeight: '700' },
-  sub: { fontSize: 13, marginBottom: 16, marginTop: 2 },
-  todayCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 16 },
-  todayTitle: { fontSize: 14, fontWeight: '700' },
-  todayDesc: { fontSize: 12 },
-  emptyWrap: { alignItems: 'center', padding: 32, gap: 8 },
-  emptyAddBtn: { paddingVertical: 13, paddingHorizontal: 24, borderRadius: 24, marginTop: 12 },
-  emptyAddBtnText: { color: 'white', fontWeight: '700', fontSize: 14 },
-  emptyTitle: { fontSize: 16, fontWeight: '700' },
-  emptyDesc: { fontSize: 13, textAlign: 'center', lineHeight: 19 },
-  medCard: { borderRadius: 16, borderWidth: 1, padding: 14 },
-  medTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-  medIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  medName: { fontSize: 14, fontWeight: '700' },
-  medMeta: { fontSize: 11, marginTop: 1 },
-  checkBtn: { width: 30, height: 30, borderRadius: 15, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  statsRow: { flexDirection: 'row', gap: 6, marginBottom: 8 },
-  statTag: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 10 },
-  actionsRow: { flexDirection: 'row', gap: 8 },
-  actionBtn: { flex: 1, paddingVertical: 7, borderRadius: 8, borderWidth: 1, alignItems: 'center' },
-  addBtn: { paddingVertical: 16, borderRadius: 16, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center', marginBottom: 16 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalCard: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
-  typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  typeBtn: { width: '30%', alignItems: 'center', gap: 4, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5 },
-  label: { fontSize: 12, fontWeight: '600', marginBottom: 6, marginTop: 10 },
-  input: { borderWidth: 1.5, borderRadius: 10, padding: 12, fontSize: 14 },
-  modalActions: { flexDirection: 'row', gap: 8, marginTop: 20, marginBottom: 10 },
-  modalCancel: { flex: 1, paddingVertical: 14, borderRadius: 12, borderWidth: 1, alignItems: 'center' },
-  modalSave: { flex: 2, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+const Tag = ({ text, tone }) => {
+  const { colors } = useTheme()
+  const fg = colors[tone] || colors.textMuted
+  const bg = colors[`${tone}Soft`] || colors.surfaceAlt
+  return (
+    <View style={[styles.tag, { backgroundColor: bg }]}>
+      <AppText variant="small" color={fg}>{text}</AppText>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  check: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
+  tag: { paddingVertical: 4, paddingHorizontal: 9, borderRadius: 10 },
+  actions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  types: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 })
 
 export default Medications

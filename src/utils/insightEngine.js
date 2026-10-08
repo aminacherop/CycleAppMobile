@@ -1,43 +1,52 @@
-import dayjs from 'dayjs'
-import { detectPeriodStartsFromLogs, calculateHistoricalCycleLengths, calculateCycleRegularity } from './cyclePrediction'
+import {
+  buildCycleContext,
+  buildPeriodDaysFromLegacy,
+  getAverages,
+  getDayInfo,
+  isValidDateStr,
+} from './cycleEngine'
+
+// When a screen doesn't pass periodDays (legacy callers), rebuild them from logs + settings.
+const resolvePeriodDays = (dailyLogs, cycleSettings, periodDays) =>
+  Array.isArray(periodDays) ? periodDays : buildPeriodDaysFromLegacy(dailyLogs, cycleSettings)
+
+const PHASE_BUCKET = {
+  period: 'Menstrual',
+  follicular: 'Follicular',
+  fertile: 'Ovulation',
+  ovulation: 'Ovulation',
+  luteal: 'Luteal',
+  late: 'Luteal',
+}
 
 /**
  * Analyzes dailyLogs to find symptom correlations by cycle phase.
+ * Each log is classified by the phase it ACTUALLY fell in (real period history
+ * from cycleEngine); logs outside any known cycle are skipped.
  * Returns top insights sorted by frequency/confidence.
  */
-export const getSymptomCorrelations = (dailyLogs, cycleSettings) => {
+export const getSymptomCorrelations = (dailyLogs, cycleSettings, periodDays) => {
   if (!dailyLogs || Object.keys(dailyLogs).length < 14) return []
 
-  const cycleLength = cycleSettings?.cycleLength || 28
-  const periodLength = cycleSettings?.periodLength || 5
-  const lastPeriodStart = cycleSettings?.lastPeriodStart
-  const lutealLength = cycleSettings?.lutealLength || 14
-  const ovulationDay = cycleLength - lutealLength
+  const days = resolvePeriodDays(dailyLogs, cycleSettings, periodDays)
+  if (!days.length) return []
+  const ctx = buildCycleContext(days, cycleSettings)
 
-  if (!lastPeriodStart) return []
-
-  const lpsDate = dayjs(lastPeriodStart)
-
-  // Classify each logged day by phase
   const phaseLogs = { Menstrual: [], Follicular: [], Ovulation: [], Luteal: [] }
   const symptomByPhase = {}
 
   Object.entries(dailyLogs).forEach(([date, log]) => {
-    const dayObj = dayjs(date)
-    const cycleDay = Math.max(1, dayObj.diff(lpsDate, 'day') % cycleLength + 1)
-
-    const phase =
-      cycleDay <= periodLength ? 'Menstrual' :
-      cycleDay <= ovulationDay - 2 ? 'Follicular' :
-      cycleDay <= ovulationDay + 2 ? 'Ovulation' : 'Luteal'
+    if (!log || typeof log !== 'object' || !isValidDateStr(date) || date > ctx.today) return
+    const info = getDayInfo(date, null, null, null, ctx)
+    const phase = PHASE_BUCKET[info.phase]
+    if (!phase) return // before the first logged period
 
     phaseLogs[phase].push(log)
 
-    // Collect all symptoms for this day
     const symptoms = [
-      ...(log.symptoms || []),
-      ...(log.symptomsDetailed || []),
-    ]
+      ...(Array.isArray(log.symptoms) ? log.symptoms : []),
+      ...(Array.isArray(log.symptomsDetailed) ? log.symptomsDetailed : []),
+    ].filter(s => typeof s === 'string')
 
     symptoms.forEach(symptom => {
       if (!symptomByPhase[symptom]) {
@@ -76,18 +85,19 @@ export const getSymptomCorrelations = (dailyLogs, cycleSettings) => {
 }
 
 /**
- * Returns a cycle regularity summary for display.
+ * Returns a cycle regularity summary for display (null until 2+ valid cycles).
  */
-export const getCycleRegularitySummary = (dailyLogs, cycleSettings) => {
-  const periodStarts = detectPeriodStartsFromLogs(dailyLogs)
-  const lengths = calculateHistoricalCycleLengths(periodStarts)
-  const score = calculateCycleRegularity(lengths)
+export const getCycleRegularitySummary = (dailyLogs, cycleSettings, periodDays) => {
+  const days = resolvePeriodDays(dailyLogs, cycleSettings, periodDays)
+  const averages = getAverages(days, cycleSettings)
+  const lengths = averages.cycleLengths
+  const score = averages.regularity
 
   if (lengths.length < 2) return null
 
   const avg = Math.round(lengths.reduce((a, b) => a + b, 0) / lengths.length)
-  const min = Math.min(...lengths)
-  const max = Math.max(...lengths)
+  const min = averages.minCycleLength
+  const max = averages.maxCycleLength
 
   const label =
     score >= 80 ? 'Very Regular' :

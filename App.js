@@ -1,294 +1,163 @@
 import 'react-native-gesture-handler'
-import { useRef, useEffect } from 'react'
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native'
+import { useEffect } from 'react'
+import { NavigationContainer, createNavigationContainerRef, DefaultTheme, DarkTheme } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
-import { createStackNavigator } from '@react-navigation/stack'
+import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Text, View, ActivityIndicator, StyleSheet } from 'react-native'
+import { View } from 'react-native'
 import * as Notifications from 'expo-notifications'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 
+import { ThemeProvider, useTheme } from './src/context/ThemeContext'
+import { LanguageProvider, useLanguage } from './src/context/LanguageContext'
+import { AppDataProvider, useApp } from './src/context/AppDataContext'
+import ErrorBoundary, { withBoundary } from './src/components/ErrorBoundary'
+import AnimatedSplash from './src/components/AnimatedSplash'
+import TabBar from './src/components/TabBar'
+import RatingHost from './src/components/RatingSheet'
+import { AdsProvider, maybeShowInterstitial } from './src/ads'
+import { applySystemBars } from './src/utils/systemBars'
+
+import OnboardingScreen from './src/screens/onboarding/OnboardingScreen'
+import HomeScreen from './src/screens/home/HomeScreen'
+import CalendarScreen from './src/screens/calendar/CalendarScreen'
+import EditPeriodScreen from './src/screens/calendar/EditPeriodScreen'
+import TrackScreen from './src/screens/track/TrackScreen'
+import SymptomPickerScreen from './src/screens/track/SymptomPickerScreen'
+import CycleHistoryScreen from './src/screens/track/CycleHistoryScreen'
+import ProfileScreen from './src/screens/profile/ProfileScreen'
+import EditProfileScreen from './src/screens/profile/EditProfileScreen'
+import CycleSettingsScreen from './src/screens/profile/CycleSettingsScreen'
+import GoalScreen from './src/screens/profile/GoalScreen'
+import PregnancyScreen from './src/screens/profile/PregnancyScreen'
+import RemindersScreen from './src/screens/profile/RemindersScreen'
+import AppearanceScreen from './src/screens/profile/AppearanceScreen'
+import LanguageScreen from './src/screens/profile/LanguageScreen'
+import BackupScreen from './src/screens/profile/BackupScreen'
+import PrivacyScreen from './src/screens/profile/PrivacyScreen'
+import Articles from './src/screens/Articles'
+import Medications from './src/screens/Medications'
+import NotificationHistory from './src/screens/NotificationHistory'
+
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
 const navigationRef = createNavigationContainerRef()
-import { ThemeProvider, useTheme } from './src/context/ThemeContext'
-import { LanguageProvider, useLanguage } from './src/context/LanguageContext'
-import useAppData from './src/hooks/useAppData'
-import AnimatedSplash from './src/components/AnimatedSplash'
-import { AdsProvider, maybeShowInterstitial } from './src/ads'
-import Onboarding from './src/screens/Onboarding'
-import Dashboard from './src/screens/Dashboard'
-import PeriodPicker from './src/screens/PeriodPicker'
-import CycleDayDetail from './src/screens/CycleDayDetail'
-import AddSymptom from './src/screens/AddSymptom'
-import PregnancyIntro from './src/screens/PregnancyIntro'
-import PregnancyMode from './src/screens/PregnancyMode'
-import GestationDatePicker from './src/screens/GestationDatePicker'
-import GoalSelector from './src/screens/GoalSelector'
-import Calendar from './src/screens/Calendar'
-import LogToday from './src/screens/LogToday'
-import Analysis from './src/screens/Analysis'
-import MyCycles from './src/screens/MyCycles'
-import Timeline from './src/screens/Timeline'
-import Profile from './src/screens/Profile'
-import Articles from './src/screens/Articles'
-import Medications from './src/screens/Medications'
-import NotificationSettings from './src/screens/NotificationSettings'
-import NotificationHistory from './src/screens/NotificationHistory'
-
+const Root = createStackNavigator()
 const Tab = createBottomTabNavigator()
-const Stack = createStackNavigator()
 const HomeStack = createStackNavigator()
-const LogStack = createStackNavigator()
+const CalendarStack = createStackNavigator()
+const TrackStack = createStackNavigator()
 const ProfileStack = createStackNavigator()
-const AnalysisStack = createStackNavigator()
 
-const ICONS = {
-  Home: '🏠',
-  Calendar: '📅',
-  Log: '➕',
-  Analysis: '📊',
-  Profile: '👤',
+// Every screen gets its own error boundary, so a bug in one screen shows a
+// "Try again" card there instead of taking the whole app down.
+const S = {
+  Onboarding: withBoundary(OnboardingScreen, 'Onboarding'),
+  Home: withBoundary(HomeScreen, 'Home'),
+  Calendar: withBoundary(CalendarScreen, 'Calendar'),
+  EditPeriod: withBoundary(EditPeriodScreen, 'EditPeriod'),
+  Track: withBoundary(TrackScreen, 'Track'),
+  SymptomPicker: withBoundary(SymptomPickerScreen, 'SymptomPicker'),
+  CycleHistory: withBoundary(CycleHistoryScreen, 'CycleHistory'),
+  Profile: withBoundary(ProfileScreen, 'Profile'),
+  EditProfile: withBoundary(EditProfileScreen, 'EditProfile'),
+  CycleSettings: withBoundary(CycleSettingsScreen, 'CycleSettings'),
+  Goal: withBoundary(GoalScreen, 'Goal'),
+  Pregnancy: withBoundary(PregnancyScreen, 'Pregnancy'),
+  Reminders: withBoundary(RemindersScreen, 'Reminders'),
+  Appearance: withBoundary(AppearanceScreen, 'Appearance'),
+  Language: withBoundary(LanguageScreen, 'Language'),
+  Backup: withBoundary(BackupScreen, 'Backup'),
+  Privacy: withBoundary(PrivacyScreen, 'Privacy'),
+  Articles: withBoundary(Articles, 'Articles'),
+  Medications: withBoundary(Medications, 'Medications'),
+  NotificationHistory: withBoundary(NotificationHistory, 'NotificationHistory'),
 }
 
-// ── Home tab gets its OWN stack so Dashboard can push detail screens ──
-const HomeStackNavigator = ({ appData }) => (
-  <HomeStack.Navigator screenOptions={{ headerShown: false }}>
-    <HomeStack.Screen name="DashboardMain">
-      {({ navigation }) => (
-        <Dashboard
-          cycleSettings={appData.cycleSettings}
-          setCycleSettings={appData.updateCycleSettings}
-          updateCycleSettings={appData.updateCycleSettings}
-          userProfile={appData.userProfile}
-          todayLog={appData.getTodayLog()}
-          saveLog={appData.saveLog}
-          dailyLogs={appData.dailyLogs}
-          navigation={navigation}
-        />
-      )}
-    </HomeStack.Screen>
-    <HomeStack.Screen name="PeriodPicker">
-      {({ navigation }) => (
-        <PeriodPicker
-          cycleSettings={appData.cycleSettings}
-          setCycleSettings={appData.updateCycleSettings}
-          navigation={navigation}
-        />
-      )}
-    </HomeStack.Screen>
-    <HomeStack.Screen name="CycleDayDetail">
-      {({ navigation }) => (
-        <CycleDayDetail
-          cycleSettings={appData.cycleSettings}
-          navigation={navigation}
-        />
-      )}
-    </HomeStack.Screen>
-    <HomeStack.Screen name="AddSymptom">
-      {({ navigation }) => (
-        <AddSymptom
-          todayLog={appData.getTodayLog()}
-          saveLog={appData.saveLog}
-          navigation={navigation}
-        />
-      )}
-    </HomeStack.Screen>
-    <HomeStack.Screen name="Articles">
-      {({ navigation }) => <Articles navigation={navigation} />}
-    </HomeStack.Screen>
-    <HomeStack.Screen name="Medications">
-      {({ navigation }) => <Medications navigation={navigation} />}
-    </HomeStack.Screen>
+const stackOptions = {
+  headerShown: false,
+  cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+  gestureEnabled: true,
+}
 
-    <HomeStack.Screen name="NotificationSettings">
-      {({ navigation }) => (
-        <NotificationSettings navigation={navigation} cycleSettings={appData.cycleSettings} />
-      )}
-    </HomeStack.Screen>
-    <HomeStack.Screen name="Notifications">
-      {({ navigation }) => (
-        <NotificationHistory navigation={navigation} />
-      )}
-    </HomeStack.Screen>
+const HomeStackNavigator = () => (
+  <HomeStack.Navigator screenOptions={stackOptions}>
+    <HomeStack.Screen name="Home" component={S.Home} />
+    <HomeStack.Screen name="Articles" component={S.Articles} />
   </HomeStack.Navigator>
 )
 
-// ── Profile tab gets its OWN stack too, for the same shortcuts ──
-const ProfileStackNavigator = ({ appData }) => (
-  <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
-    <ProfileStack.Screen name="ProfileMain">
-      {({ navigation }) => (
-        <Profile
-          cycleSettings={appData.cycleSettings}
-          setCycleSettings={appData.updateCycleSettings}
-          userProfile={appData.userProfile}
-          setUserProfile={appData.updateProfile}
-          resetAllData={appData.resetAllData}
-          navigation={navigation}
-        />
-      )}
-    </ProfileStack.Screen>
-    <ProfileStack.Screen name="Articles">
-      {({ navigation }) => <Articles navigation={navigation} />}
-    </ProfileStack.Screen>
-    <ProfileStack.Screen name="Medications">
-      {({ navigation }) => <Medications navigation={navigation} />}
-    </ProfileStack.Screen>
+const CalendarStackNavigator = () => (
+  <CalendarStack.Navigator screenOptions={stackOptions}>
+    <CalendarStack.Screen name="Calendar" component={S.Calendar} />
+    <CalendarStack.Screen
+      name="EditPeriod"
+      component={S.EditPeriod}
+      options={{ cardStyleInterpolator: CardStyleInterpolators.forVerticalIOS }}
+    />
+  </CalendarStack.Navigator>
+)
 
-    <ProfileStack.Screen name="NotificationSettings">
-      {({ navigation }) => (
-        <NotificationSettings navigation={navigation} cycleSettings={appData.cycleSettings} />
-      )}
-    </ProfileStack.Screen>
+const TrackStackNavigator = () => (
+  <TrackStack.Navigator screenOptions={stackOptions}>
+    <TrackStack.Screen name="Track" component={S.Track} />
+    <TrackStack.Screen name="SymptomPicker" component={S.SymptomPicker} />
+    <TrackStack.Screen name="CycleHistory" component={S.CycleHistory} />
+    <TrackStack.Screen name="Articles" component={S.Articles} />
+  </TrackStack.Navigator>
+)
+
+const ProfileStackNavigator = () => (
+  <ProfileStack.Navigator screenOptions={stackOptions}>
+    <ProfileStack.Screen name="Profile" component={S.Profile} />
+    <ProfileStack.Screen name="EditProfile" component={S.EditProfile} />
+    <ProfileStack.Screen name="CycleSettings" component={S.CycleSettings} />
+    <ProfileStack.Screen name="Goal" component={S.Goal} />
+    <ProfileStack.Screen name="Pregnancy" component={S.Pregnancy} />
+    <ProfileStack.Screen name="Reminders" component={S.Reminders} />
+    <ProfileStack.Screen name="Appearance" component={S.Appearance} />
+    <ProfileStack.Screen name="Language" component={S.Language} />
+    <ProfileStack.Screen name="Backup" component={S.Backup} />
+    <ProfileStack.Screen name="Privacy" component={S.Privacy} />
+    <ProfileStack.Screen name="Medications" component={S.Medications} />
+    <ProfileStack.Screen name="NotificationHistory" component={S.NotificationHistory} />
+    <ProfileStack.Screen name="Articles" component={S.Articles} />
   </ProfileStack.Navigator>
 )
 
-// ── Analysis tab gets its OWN stack for MyCycles detail screen ──
-const AnalysisStackNavigator = ({ appData }) => (
-  <AnalysisStack.Navigator screenOptions={{ headerShown: false }}>
-    <AnalysisStack.Screen name="AnalysisMain">
-      {({ navigation }) => (
-        <Analysis
-          cycleSettings={appData.cycleSettings}
-          setCycleSettings={appData.updateCycleSettings}
-          dailyLogs={appData.dailyLogs}
-          installDate={appData.installDate}
-          navigation={navigation}
-        />
-      )}
-    </AnalysisStack.Screen>
-    <AnalysisStack.Screen name="MyCycles">
-      {({ navigation }) => (
-        <MyCycles
-          cycleSettings={appData.cycleSettings}
-          dailyLogs={appData.dailyLogs}
-          userProfile={appData.userProfile}
-          installDate={appData.installDate}
-          navigation={navigation}
-        />
-      )}
-    </AnalysisStack.Screen>
-    <AnalysisStack.Screen name="Timeline">
-      {({ navigation }) => (
-        <Timeline
-          cycleSettings={appData.cycleSettings}
-          dailyLogs={appData.dailyLogs}
-          navigation={navigation}
-        />
-      )}
-    </AnalysisStack.Screen>
-
-    <AnalysisStack.Screen name="PregnancyIntro">
-      {({ navigation }) => <PregnancyIntro navigation={navigation} />}
-    </AnalysisStack.Screen>
-    <AnalysisStack.Screen name="PregnancyMode">
-      {({ navigation }) => <PregnancyMode navigation={navigation} />}
-    </AnalysisStack.Screen>
-    <AnalysisStack.Screen name="GestationDatePicker">
-      {({ route, navigation }) => (
-        <GestationDatePicker route={route} navigation={navigation} />
-      )}
-    </AnalysisStack.Screen>
-    <AnalysisStack.Screen name="GoalSelector">
-      {({ route, navigation }) => (
-        <GoalSelector route={route} navigation={navigation} />
-      )}
-    </AnalysisStack.Screen>
-  </AnalysisStack.Navigator>
-)
-
-
-const TabNavigator = ({ appData }) => {
-  const insets = useSafeAreaInsets()
-  // Reserve the real system nav-bar / home-indicator inset SEPARATELY from a
-  // fixed content height, so the icon + label always get the same room on every
-  // phone and can never be clipped behind the gesture/button navigation bar.
-  const CONTENT_HEIGHT = 52
-  const TOP_PAD = 6
-  const bottomInset = Math.max(insets.bottom, 10)
-
-  return (
+const MainTabs = () => (
   <Tab.Navigator
+    tabBar={(props) => <TabBar {...props} />}
+    screenOptions={{ headerShown: false, lazy: true, freezeOnBlur: true }}
     screenListeners={{
       // Aggressive: attempt an interstitial on tab switches. The manager's
       // frequency cap (every Nth action + time cooldown) throttles it so
       // it stays policy-safe.
       tabPress: () => { maybeShowInterstitial() },
     }}
-    screenOptions={({ route }) => ({
-      headerShown: false,
-      tabBarStyle: [
-        styles.tabBar,
-        {
-          height: CONTENT_HEIGHT + TOP_PAD + bottomInset,
-          paddingTop: TOP_PAD,
-          paddingBottom: bottomInset,
-        },
-      ],
-      tabBarActiveTintColor: '#C2527A',
-      tabBarInactiveTintColor: '#6B7280',
-      tabBarLabelStyle: styles.tabLabel,
-      tabBarIconStyle: styles.tabIcon,
-      tabBarAllowFontScaling: false,
-      tabBarIcon: () => (
-        <Text allowFontScaling={false} style={{ fontSize: route.name === 'Log' ? 28 : 22 }}>
-          {ICONS[route.name]}
-        </Text>
-      ),
-    })}
   >
-    <Tab.Screen name="Home">
-      {() => <HomeStackNavigator appData={appData} />}
-    </Tab.Screen>
-    <Tab.Screen name="Calendar">
-      {({ navigation, route }) => (
-        <Calendar
-          cycleSettings={appData.cycleSettings}
-          dailyLogs={appData.dailyLogs}
-          setCycleSettings={appData.updateCycleSettings}
-          navigation={navigation}
-          route={route}
-        />
-      )}
-    </Tab.Screen>
-    <Tab.Screen name="Log">
-      {() => (
-        <LogStack.Navigator screenOptions={{ headerShown: false }}>
-          <LogStack.Screen name="LogMain">
-            {({ navigation }) => (
-              <LogToday
-                saveLog={appData.saveLog}
-                todayLog={appData.getTodayLog()}
-                navigation={navigation}
-              />
-            )}
-          </LogStack.Screen>
-          <LogStack.Screen name="AddSymptom">
-            {({ navigation }) => (
-              <AddSymptom
-                navigation={navigation}
-                dailyLogs={appData.dailyLogs}
-                saveLog={appData.saveLog}
-              />
-            )}
-          </LogStack.Screen>
-        </LogStack.Navigator>
-      )}
-    </Tab.Screen>
-    <Tab.Screen name="Analysis">
-      {() => <AnalysisStackNavigator appData={appData} />}
-    </Tab.Screen>
-    <Tab.Screen name="Profile">
-      {() => <ProfileStackNavigator appData={appData} />}
-    </Tab.Screen>
+    <Tab.Screen name="HomeTab" component={HomeStackNavigator} />
+    <Tab.Screen name="CalendarTab" component={CalendarStackNavigator} />
+    <Tab.Screen name="TrackTab" component={TrackStackNavigator} />
+    <Tab.Screen name="ProfileTab" component={ProfileStackNavigator} />
   </Tab.Navigator>
-  )
+)
+
+// Notification taps carry { screen } in their data payload.
+const routeForNotification = (screen) => {
+  switch (screen) {
+    case 'Medications': return ['Main', { screen: 'ProfileTab', params: { screen: 'Medications', initial: false } }]
+    case 'Calendar': return ['Main', { screen: 'CalendarTab' }]
+    case 'Log':
+    case 'Track': return ['Main', { screen: 'TrackTab', params: { screen: 'Track', params: { view: 'log' } } }]
+    case 'Notifications': return ['Main', { screen: 'ProfileTab', params: { screen: 'NotificationHistory', initial: false } }]
+    default: return ['Main', { screen: 'HomeTab' }]
+  }
 }
 
 const AppContent = () => {
-  const appData = useAppData()
+  const appData = useApp()
   const insets = useSafeAreaInsets()
   const { colors, isDark } = useTheme()
   const { loading: langLoading } = useLanguage()
@@ -297,34 +166,27 @@ const AppContent = () => {
     if (!data) return
     const tryNavigate = (attemptsLeft) => {
       if (!navigationRef.isReady()) {
-        if (attemptsLeft > 0) {
-          setTimeout(() => tryNavigate(attemptsLeft - 1), 300)
-        }
+        if (attemptsLeft > 0) setTimeout(() => tryNavigate(attemptsLeft - 1), 300)
         return
       }
-      if (data.screen === 'Medications') {
-        navigationRef.navigate('Main', { screen: 'Home', params: { screen: 'Medications' } })
-      } else if (data.screen === 'Calendar') {
-        navigationRef.navigate('Main', { screen: 'Calendar' })
-      } else if (data.screen === 'Log') {
-        navigationRef.navigate('Main', { screen: 'Log' })
-      } else if (data.screen) {
-        navigationRef.navigate('Main', { screen: 'Home', params: { screen: data.screen } })
+      try {
+        const [name, params] = routeForNotification(data.screen)
+        navigationRef.navigate(name, params)
+      } catch (err) {
+        console.warn('Notification navigation failed', err)
       }
     }
     tryNavigate(10)
   }
 
   useEffect(() => {
-    Notifications.getLastNotificationResponseAsync().then(response => {
-      if (response && response.notification) {
-        const data = response.notification.request.content.data
-        navigateFromNotificationData(data)
-      }
-    })
-    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data
-      navigateFromNotificationData(data)
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (response?.notification) navigateFromNotificationData(response.notification.request.content.data)
+      })
+      .catch(() => {})
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      navigateFromNotificationData(response?.notification?.request?.content?.data)
     })
     return () => subscription.remove()
   }, [])
@@ -333,77 +195,64 @@ const AppContent = () => {
     SplashScreen.hideAsync().catch(() => {})
   }, [])
 
+  useEffect(() => {
+    applySystemBars({ isDark, background: colors.bg })
+  }, [isDark, colors.bg])
+
   if (appData.loading || langLoading) {
     return <AnimatedSplash />
   }
 
+  const navTheme = {
+    ...(isDark ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDark ? DarkTheme : DefaultTheme).colors,
+      background: colors.bg,
+      card: colors.surface,
+      primary: colors.primary,
+      text: colors.text,
+      border: colors.border,
+    },
+  }
+
   return (
     <AdsProvider suppressAppOpen={!appData.isOnboarded}>
-      <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
+      <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }}>
         <StatusBar style={isDark ? 'light' : 'dark'} />
-        <NavigationContainer ref={navigationRef}>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <NavigationContainer ref={navigationRef} theme={navTheme}>
+          <Root.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
             {!appData.isOnboarded ? (
-              <Stack.Screen name="Onboarding">
-                {() => <Onboarding onComplete={appData.completeOnboarding} />}
-              </Stack.Screen>
+              <Root.Screen name="Onboarding" component={S.Onboarding} />
             ) : (
-              <Stack.Screen name="Main">
-                {() => <TabNavigator appData={appData} />}
-              </Stack.Screen>
+              <Root.Screen name="Main" component={MainTabs} />
             )}
-          </Stack.Navigator>
+          </Root.Navigator>
         </NavigationContainer>
+        <RatingHost />
       </View>
     </AdsProvider>
   )
 }
 
+const ThemedBoundary = ({ children }) => {
+  const { isDark } = useTheme()
+  return <ErrorBoundary scope="root" dark={isDark}>{children}</ErrorBoundary>
+}
+
 export default function App() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-          <LanguageProvider>
-            <AppContent />
-          </LanguageProvider>
-      </ThemeProvider>
+      <ErrorBoundary scope="providers">
+        <ThemeProvider>
+          <ThemedBoundary>
+            <LanguageProvider>
+              <AppDataProvider>
+                <AppContent />
+              </AppDataProvider>
+            </LanguageProvider>
+          </ThemedBoundary>
+        </ThemeProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   )
 }
-
-const styles = StyleSheet.create({
-  splash: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFF6F9',
-    gap: 12,
-  },
-  splashIcon: {
-    fontSize: 72,
-  },
-  splashTitle: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#C2527A',
-  },
-  splashSub: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  tabBar: {
-    backgroundColor: '#FFFFFF',
-    borderTopColor: '#F2E4EA',
-    // height / paddingTop / paddingBottom are set dynamically in TabNavigator
-    // from the safe-area insets so the bar never clips behind the nav bar.
-  },
-  tabLabel: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  tabIcon: {
-    marginTop: 2,
-  },
-})

@@ -1,5 +1,6 @@
-import { saveData, loadData } from './storage'
+import { saveData, loadData, enqueueWrite } from './storage'
 import dayjs from 'dayjs'
+import { cancelMedicationReminder, scheduleMedicationReminders } from './notifications'
 
 const MEDS_KEY = 'medications'
 const MEDS_LOG_KEY = 'medication_logs'
@@ -21,7 +22,7 @@ export const MEDICATION_TYPES = [
 export const saveMedications = (meds) => saveData(MEDS_KEY, meds)
 export const loadMedications = () => loadData(MEDS_KEY, [])
 
-export const addMedication = async (medication) => {
+export const addMedication = (medication) => enqueueWrite(async () => {
   const meds = await loadMedications()
   const newMed = {
     id: Date.now().toString(),
@@ -32,26 +33,49 @@ export const addMedication = async (medication) => {
   const updated = [...meds, newMed]
   await saveMedications(updated)
   return updated
-}
+})
 
 export const updateMedication = async (id, updates) => {
-  const meds = await loadMedications()
-  const updated = meds.map(m => m.id === id ? { ...m, ...updates } : m)
-  await saveMedications(updated)
+  const updated = await enqueueWrite(async () => {
+    const meds = await loadMedications()
+    const next = meds.map(m => m.id === id ? { ...m, ...updates } : m)
+    await saveMedications(next)
+    return next
+  })
+  // Pausing cancels the reminder; resuming / changing the time re-arms it.
+  const med = updated.find(m => m.id === id)
+  if (!med || !med.active) await cancelMedicationReminder(id)
+  else if ('active' in updates || 'reminderTime' in updates || 'name' in updates) {
+    await scheduleMedicationReminders(updated)
+  }
   return updated
 }
 
 export const deleteMedication = async (id) => {
-  const meds = await loadMedications()
-  const updated = meds.filter(m => m.id !== id)
-  await saveMedications(updated)
+  const updated = await enqueueWrite(async () => {
+    const meds = await loadMedications()
+    const next = meds.filter(m => m.id !== id)
+    await saveMedications(next)
+    return next
+  })
+  await cancelMedicationReminder(id)
   return updated
+}
+
+/**
+ * Re-sync all 'med-*' notifications with the stored list (cancels orphans of
+ * deleted/paused meds, converts old one-shot future-start reminders to daily).
+ * Pass the UI translate fn `t` to localize the text.
+ */
+export const syncMedicationReminders = async (t) => {
+  const meds = await loadMedications()
+  await scheduleMedicationReminders(Array.isArray(meds) ? meds : [], t)
 }
 
 // ── DAILY LOGS — did they take it? ─────────────
 export const loadMedicationLogs = () => loadData(MEDS_LOG_KEY, {})
 
-export const logMedicationTaken = async (medId, date, taken) => {
+export const logMedicationTaken = (medId, date, taken) => enqueueWrite(async () => {
   const logs = await loadMedicationLogs()
   const key = `${medId}_${date}`
   const updated = {
@@ -65,7 +89,7 @@ export const logMedicationTaken = async (medId, date, taken) => {
   }
   await saveData(MEDS_LOG_KEY, updated)
   return updated
-}
+})
 
 export const getMedicationLogForDate = async (medId, date) => {
   const logs = await loadMedicationLogs()

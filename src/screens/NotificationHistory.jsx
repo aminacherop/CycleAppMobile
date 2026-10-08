@@ -1,158 +1,114 @@
-import { useState, useEffect, useCallback } from 'react'
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native'
+import { useState, useCallback } from 'react'
+import { View, StyleSheet } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
-import dayjs from 'dayjs'
 import * as Notifications from 'expo-notifications'
-import { useTheme } from '../context/ThemeContext'
 import { useLanguage } from '../context/LanguageContext'
+import { Screen, AppText, Card, EmptyState, FadeIn, IconBadge, IconButton } from '../components/ui'
 import { clearUnreadNotifications } from '../utils/notifications'
+import { formatDate } from '../utils/dates'
+import { BackHeader } from './profile/shared'
 
-const TYPE_ICONS = {
-  period: '🩸',
-  ovulation: '✨',
-  fertile: '🌱',
-  daily_log: '📝',
-  medication: '💊',
-  water: '💧',
+const TYPE_STYLE = {
+  period: { icon: 'drop', tone: 'period' },
+  ovulation: { icon: 'egg', tone: 'ovulation' },
+  fertile: { icon: 'leaf', tone: 'fertile' },
+  daily_log: { icon: 'note', tone: 'primary' },
+  medication: { icon: 'pill', tone: 'success' },
+  water: { icon: 'water', tone: 'info' },
+}
+
+// Notification titles carry a leading emoji; the icon badge replaces it here.
+const isDecor = (c) => c <= 32 || (c >= 0x2000 && c <= 0x33ff) || (c >= 0xd800 && c <= 0xdfff) || c === 0xfe0f
+const stripEmoji = (s) => {
+  const str = String(s || '')
+  let i = 0
+  while (i < str.length && isDecor(str.charCodeAt(i))) i++
+  return str.slice(i).trim()
 }
 
 const NotificationHistory = ({ navigation }) => {
-  const { colors } = useTheme()
-  const { t } = useLanguage()
-  const [notifications, setNotifications] = useState([])
+  const { t, language } = useLanguage()
+  const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 
-  const loadNotifications = async () => {
+  useFocusEffect(useCallback(() => {
+    let alive = true
+    ;(async () => {
+      try {
+        const presented = await Notifications.getPresentedNotificationsAsync()
+        const sorted = (Array.isArray(presented) ? presented : []).slice().sort((a, b) => (b?.date || 0) - (a?.date || 0))
+        if (alive) setItems(sorted)
+      } catch (err) {
+        console.error('Error loading notification history:', err)
+      } finally {
+        if (alive) setLoading(false)
+      }
+      // Viewing the list marks them as read.
+      clearUnreadNotifications().catch(() => {})
+    })()
+    return () => { alive = false }
+  }, []))
+
+  const open = (data) => {
+    const screen = data?.screen
     try {
-      const presented = await Notifications.getPresentedNotificationsAsync()
-      const sorted = [...presented].sort((a, b) =>
-        (b.date || 0) - (a.date || 0)
-      )
-      setNotifications(sorted)
-    } catch (err) {
-      console.error('Error loading notification history:', err)
-    } finally {
-      setLoading(false)
+      if (screen === 'Medications') navigation.navigate('Medications')
+      else if (screen === 'Calendar') navigation.navigate('CalendarTab', { screen: 'Calendar' })
+      else if (screen === 'Log' || screen === 'Track') navigation.navigate('TrackTab', { screen: 'Track', params: { view: 'log' } })
+    } catch (e) {
+      console.warn('Notification navigation failed', e)
     }
   }
-
-  useFocusEffect(
-    useCallback(() => {
-      loadNotifications()
-      // Clear the unread badge once the user actually views this screen
-      clearUnreadNotifications().then(() => {
-        // Re-fetch is unnecessary since we already captured the list above,
-        // but dismissing marks them as read for the badge count.
-      })
-    }, [])
-  )
-
-  const handleTapNotification = (item) => {
-    const data = item.request?.content?.data
-    if (!data?.screen) return
-
-    if (data.screen === 'Medications') {
-      navigation?.getParent()?.navigate('Home', { screen: 'Medications' })
-    } else if (data.screen === 'Calendar') {
-      navigation?.getParent()?.navigate('Calendar')
-    } else if (data.screen === 'Log') {
-      navigation?.getParent()?.navigate('Log')
-    }
-  }
-
-  const styles = makeStyles(colors)
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.scrollContent}
+    <Screen
+      header={(
+        <BackHeader
+          navigation={navigation}
+          title={t('pf_recent_notifications')}
+          right={<IconButton name="gear" onPress={() => navigation.navigate('Reminders')} accessibilityLabel={t('reminders_label')} />}
+        />
+      )}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={{ fontSize: 22, color: colors.textPrimary }}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-          {t('notifications')}
-        </Text>
-        <TouchableOpacity onPress={() => navigation.navigate('NotificationSettings')}>
-          <Text style={{ fontSize: 20 }}>⚙️</Text>
-        </TouchableOpacity>
-      </View>
-
-      {loading ? null : notifications.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Text style={{ fontSize: 40 }}>🔔</Text>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            {t('no_notifications_yet')}
-          </Text>
-        </View>
+      {loading ? null : items.length === 0 ? (
+        <FadeIn index={0}>
+          <EmptyState icon="bell" title={t('no_notifications_yet')} body={t('pf_history_empty')} />
+        </FadeIn>
       ) : (
-        <View style={{ gap: 10 }}>
-          {notifications.map((item, i) => {
-            const content = item.request?.content
-            const data = content?.data
-            const icon = TYPE_ICONS[data?.type] || '🔔'
-            const date = item.date ? dayjs(item.date) : null
-
+        <View style={{ gap: 10, marginTop: 4 }}>
+          {items.map((item, i) => {
+            const content = item?.request?.content || {}
+            const data = content.data || {}
+            const ts = TYPE_STYLE[data.type] || { icon: 'bell', tone: 'primary' }
+            const tappable = ['Medications', 'Calendar', 'Log', 'Track'].includes(data.screen)
+            const when = item?.date ? formatDate(item.date, 'MMM D, HH:mm', language) : ''
+            const title = stripEmoji(content.title) || t('notification_default')
             return (
-              <TouchableOpacity
-                key={item.request?.identifier || i}
-                style={[styles.notifCard, { backgroundColor: colors.white, borderColor: colors.border }]}
-                onPress={() => handleTapNotification(item)}
-                activeOpacity={data?.screen ? 0.7 : 1}
-              >
-                <Text style={{ fontSize: 24 }}>{icon}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.notifTitle, { color: colors.textPrimary }]}>
-                    {content?.title || t('notification_default')}
-                  </Text>
-                  <Text style={[styles.notifBody, { color: colors.textSecondary }]} numberOfLines={2}>
-                    {content?.body || ''}
-                  </Text>
-                  {date && (
-                    <Text style={[styles.notifTime, { color: colors.textSecondary }]}>
-                      {date.format('MMM D, h:mm A')}
-                    </Text>
-                  )}
-                </View>
-              </TouchableOpacity>
+              <FadeIn key={item?.request?.identifier || i} index={i}>
+                <Card
+                  onPress={tappable ? () => open(data) : undefined}
+                  accessibilityLabel={[title, content.body, when].filter(Boolean).join('. ')}
+                >
+                  <View style={styles.row}>
+                    <IconBadge name={ts.icon} tone={ts.tone} size={40} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <AppText variant="subheading" numberOfLines={1}>{title}</AppText>
+                      {content.body ? <AppText variant="caption" muted numberOfLines={2} style={{ marginTop: 2 }}>{content.body}</AppText> : null}
+                      {when ? <AppText variant="small" faint style={{ marginTop: 4 }}>{when}</AppText> : null}
+                    </View>
+                  </View>
+                </Card>
+              </FadeIn>
             )
           })}
         </View>
       )}
-
-    </ScrollView>
+    </Screen>
   )
 }
 
-const makeStyles = (colors) => StyleSheet.create({
-  container: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 60 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
-  emptyWrap: { alignItems: 'center', paddingVertical: 60, gap: 10 },
-  emptyText: { fontSize: 13 },
-  notifCard: {
-    flexDirection: 'row',
-    gap: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
-  },
-  notifTitle: { fontSize: 14, fontWeight: '700', marginBottom: 3 },
-  notifBody: { fontSize: 12, lineHeight: 17, marginBottom: 4 },
-  notifTime: { fontSize: 11 },
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
 })
 
 export default NotificationHistory

@@ -1,32 +1,49 @@
 import * as Print from 'expo-print'
 import * as Sharing from 'expo-sharing'
+import { File, Paths } from 'expo-file-system'
 import dayjs from 'dayjs'
 import { SYMPTOM_CATEGORIES, getSymptomLabel as getLabel } from './symptomCategories'
+import { buildPeriodDaysFromLegacy, getCycleHistory, getCycleState } from './cycleEngine'
 
-const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate }) => {
-  const cycleLength = cycleSettings?.cycleLength || 28
-  const periodLength = cycleSettings?.periodLength || 5
-  const lutealLength = cycleSettings?.lutealLength || 14
-  const lastPeriodStart = cycleSettings?.lastPeriodStart || dayjs().format('YYYY-MM-DD')
-  const lpsDate = dayjs(lastPeriodStart)
+// Escape user-provided text before putting it in the report HTML.
+const esc = (v) => String(v ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;')
+
+const fmt = (d) => (d ? dayjs(d).format('MMM D, YYYY') : '—')
+
+const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, periodDays }) => {
   const today = dayjs()
+  const todayStr = today.format('YYYY-MM-DD')
+  // Real history: periodDays from the app, or rebuilt from logs for legacy callers.
+  const days = Array.isArray(periodDays) ? periodDays : buildPeriodDaysFromLegacy(dailyLogs, cycleSettings, todayStr)
+  const state = getCycleState(days, cycleSettings, todayStr)
+  const history = getCycleHistory(days, cycleSettings, todayStr)
+  const averages = state.averages
+  const cycleLength = averages.cycleLength
+  const periodLength = averages.periodLength
+  const lutealLength = averages.lutealLength
+  const averagesNote = averages.source === 'learned'
+    ? `Learned from ${averages.cyclesUsed} logged cycles`
+    : 'Based on user settings (not enough logged cycles yet)'
 
-  // Build cycle history
-  const cycles = []
-  const start = installDate ? dayjs(installDate) : lpsDate
-  let cursor = lpsDate
-  while (cursor.isBefore(today)) {
-    if (cursor.isAfter(start) || cursor.isSame(start, 'day')) {
-      cycles.push({
-        start: cursor.format('MMM D, YYYY'),
-        end: cursor.add(periodLength - 1, 'day').format('MMM D, YYYY'),
-        ovulation: cursor.add(cycleLength - lutealLength, 'day').format('MMM D, YYYY'),
-        length: cycleLength,
-      })
-    }
-    cursor = cursor.add(cycleLength, 'day')
-  }
-  const recentCycles = cycles.reverse().slice(0, 6)
+  const recentCycles = [
+    ...(history.current ? [{
+      start: fmt(history.current.start),
+      end: fmt(history.current.end),
+      ovulation: state.isLate ? '—' : `${fmt(state.ovulationDate)} (est.)`,
+      length: state.isLate ? `In progress — ${state.daysLate} days late` : `In progress (day ${state.cycleDay})`,
+    }] : []),
+    ...history.completed.slice().reverse().map(c => ({
+      start: fmt(c.start),
+      end: fmt(c.end),
+      ovulation: `${fmt(c.ovulationDate)} (est.)`,
+      length: `${c.cycleLength} days`,
+    })),
+  ].slice(0, 7)
 
   // Build last 30 days of logs
   const recentLogs = []
@@ -34,8 +51,12 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
     Object.entries(dailyLogs)
       .filter(([date]) => dayjs(date).isAfter(today.subtract(30, 'day')))
       .sort((a, b) => dayjs(b[0]).diff(dayjs(a[0])))
-      .forEach(([date, log]) => recentLogs.push({ date, ...log }))
+      .forEach(([date, log]) => recentLogs.push({ ...log, date }))
   }
+  // Only show the Sleep column if sleep was actually logged.
+  const showSleep = recentLogs.some(l => l.sleep != null && l.sleep !== '' && Number(l.sleep) > 0)
+  const columnCount = showSleep ? 11 : 10
+  const join = (arr) => (Array.isArray(arr) ? arr : []).map(esc).join(', ')
 
   // Symptom frequency (merges flat list + detailed categorized symptoms)
   const allDetailedSymptoms = SYMPTOM_CATEGORIES.flatMap(c => c.items)
@@ -44,11 +65,13 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
     return item ? getLabel(item, 'en') : id
   }
   const symptomCount = {}
+  const list = (x) => (Array.isArray(x) ? x.filter(v => typeof v === 'string') : [])
   Object.values(dailyLogs || {}).forEach(log => {
-    (log.symptoms || []).forEach(s => {
+    if (!log || typeof log !== 'object') return
+    list(log.symptoms).forEach(s => {
       symptomCount[s] = (symptomCount[s] || 0) + 1
     })
-    ;(log.symptomsDetailed || []).forEach(id => {
+    ;list(log.symptomsDetailed).forEach(id => {
       const label = getSymptomLabel(id)
       symptomCount[label] = (symptomCount[label] || 0) + 1
     })
@@ -156,7 +179,7 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
           <div class="info-grid">
             <div class="info-item">
               <div class="info-label">Name</div>
-              <div class="info-value">${userProfile?.name || 'N/A'}</div>
+              <div class="info-value">${esc(userProfile?.name) || 'N/A'}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Age</div>
@@ -164,7 +187,7 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
             </div>
             <div class="info-item">
               <div class="info-label">Health Condition</div>
-              <div class="info-value">${userProfile?.condition && userProfile.condition !== 'none' ? userProfile.condition : 'None reported'}</div>
+              <div class="info-value">${userProfile?.condition && userProfile.condition !== 'none' ? esc(userProfile.condition) : 'None reported'}</div>
             </div>
           </div>
         </div>
@@ -175,6 +198,7 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
             <div class="info-item">
               <div class="info-label">Average Cycle Length</div>
               <div class="info-value">${cycleLength} days</div>
+              <div class="info-label">${esc(averagesNote)}</div>
             </div>
             <div class="info-item">
               <div class="info-label">Average Period Length</div>
@@ -186,13 +210,23 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
             </div>
             <div class="info-item">
               <div class="info-label">Last Period Start</div>
-              <div class="info-value">${lpsDate.format('MMM D, YYYY')}</div>
+              <div class="info-value">${fmt(state.lastPeriodStart)}</div>
             </div>
+            <div class="info-item">
+              <div class="info-label">${state.isLate ? 'Period Status' : 'Next Period (est.)'}</div>
+              <div class="info-value">${!state.hasData ? '—' : state.isLate ? `${state.daysLate} days late` : fmt(state.nextPeriodStart)}</div>
+            </div>
+            ${averages.regularity != null ? `
+            <div class="info-item">
+              <div class="info-label">Regularity Score</div>
+              <div class="info-value">${averages.regularity}/100</div>
+            </div>` : ''}
           </div>
         </div>
 
         <div class="section">
           <div class="section-title">Recent Cycle History (${recentCycles.length} cycles)</div>
+          ${recentCycles.length === 0 ? '<p style="color:#9CA3AF;">No periods logged yet</p>' : ''}
           <table>
             <tr>
               <th>Period Start</th>
@@ -205,7 +239,7 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
                 <td>${c.start}</td>
                 <td>${c.end}</td>
                 <td>${c.ovulation}</td>
-                <td>${c.length} days</td>
+                <td>${c.length}</td>
               </tr>
             `).join('')}
           </table>
@@ -216,7 +250,7 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
           ${topSymptoms.length === 0
             ? '<p style="color:#9CA3AF;">No symptoms logged yet</p>'
             : topSymptoms.map(([symptom, count]) =>
-                `<span class="symptom-tag">${symptom} (${count}x)</span>`
+                `<span class="symptom-tag">${esc(symptom)} (${count}x)</span>`
               ).join('')}
         </div>
 
@@ -229,7 +263,7 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
               <th>Mood</th>
               <th>Symptoms</th>
               <th>Water</th>
-              <th>Sleep</th>
+              ${showSleep ? '<th>Sleep</th>' : ''}
               <th>Mucus</th>
               <th>Weight</th>
               <th>Intimacy</th>
@@ -237,20 +271,20 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
               <th>Preg. Test</th>
             </tr>
             ${recentLogs.length === 0
-              ? '<tr><td colspan="6" style="text-align:center;color:#9CA3AF;">No logs in the last 30 days</td></tr>'
+              ? `<tr><td colspan="${columnCount}" style="text-align:center;color:#9CA3AF;">No logs in the last 30 days</td></tr>`
               : recentLogs.map(log => `
                 <tr>
                   <td>${dayjs(log.date).format('MMM D')}</td>
-                  <td>${log.flow && log.flow !== 'none' ? log.flow : '—'}</td>
-                  <td>${(log.moods || []).join(', ') || '—'}</td>
-                  <td>${[...(log.symptoms || []), ...((log.symptomsDetailed || []).map(getSymptomLabel))].join(', ') || '—'}</td>
-                  <td>${log.water ? log.water + '/8' : '—'}</td>
-                  <td>${log.sleep ? log.sleep + 'h' : '—'}</td>
-                  <td>${log.mucus || '—'}</td>
-                  <td>${log.weight ? log.weight + 'kg' : '—'}</td>
-                  <td>${log.intimacy || '—'}</td>
-                  <td>${log.bbt ? log.bbt + '°C' : '—'}</td>
-                  <td>${log.pregnancyTest && log.pregnancyTest !== 'notaken' ? log.pregnancyTest : '—'}</td>
+                  <td>${log.flow && log.flow !== 'none' ? esc(log.flow) : '—'}</td>
+                  <td>${join(log.moods) || '—'}</td>
+                  <td>${join([...list(log.symptoms), ...list(log.symptomsDetailed).map(getSymptomLabel)]) || '—'}</td>
+                  <td>${log.water ? esc(log.water) + '/8' : '—'}</td>
+                  ${showSleep ? `<td>${log.sleep ? esc(log.sleep) + 'h' : '—'}</td>` : ''}
+                  <td>${esc(log.mucus) || '—'}</td>
+                  <td>${log.weight ? esc(log.weight) + 'kg' : '—'}</td>
+                  <td>${esc(log.intimacy) || '—'}</td>
+                  <td>${log.bbt ? esc(log.bbt) + '°C' : '—'}</td>
+                  <td>${log.pregnancyTest && log.pregnancyTest !== 'notaken' ? esc(log.pregnancyTest) : '—'}</td>
                 </tr>
               `).join('')}
           </table>
@@ -270,7 +304,19 @@ const generateReportHTML = ({ userProfile, cycleSettings, dailyLogs, installDate
 export const generateAndShareReport = async (data) => {
   try {
     const html = generateReportHTML(data)
-    const { uri } = await Print.printToFileAsync({ html, base64: false })
+    const { uri: printedUri } = await Print.printToFileAsync({ html, base64: false })
+
+    // Give the file a readable name (the printer returns a random UUID name),
+    // since it ends up attached to emails and chats to doctors.
+    let uri = printedUri
+    try {
+      const named = new File(Paths.cache, `MyCycle-Report-${dayjs().format('YYYY-MM-DD')}.pdf`)
+      if (named.exists) named.delete()
+      new File(printedUri).copy(named)
+      uri = named.uri
+    } catch {
+      uri = printedUri
+    }
 
     const isAvailable = await Sharing.isAvailableAsync()
     if (isAvailable) {

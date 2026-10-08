@@ -9,8 +9,13 @@ import zh from './locales/zh'
 import ru from './locales/ru'
 import id from './locales/id'
 import sw from './locales/sw'
+import { mergeAreas } from '../i18n/index'
 
-export const translations = { en, es, fr, pt, de, hi, ar, zh, ru, id, sw }
+const BASE = { en, es, fr, pt, de, hi, ar, zh, ru, id, sw }
+
+export const translations = Object.fromEntries(
+  Object.entries(BASE).map(([lang, dict]) => [lang, { ...dict, ...mergeAreas(lang) }])
+)
 
 // Language registry — order defines how they appear in the picker.
 // `rtl: true` triggers right-to-left layout (Arabic).
@@ -41,8 +46,12 @@ export const resolveLanguage = (locale) => {
 
 export const t = (lang, key, replacements = {}) => {
   const text = translations[lang]?.[key] || translations['en']?.[key] || key
-  return Object.entries(replacements).reduce(
-    (str, [k, v]) => str.replace(`{${k}}`, v),
-    text
+  return Object.entries(replacements || {}).reduce(
+    (str, [k, v]) => str.split(`{${k}}`).join(String(v)),
+    String(text)
   )
 }
+
+// True when a key exists (in the language or English). Use instead of the
+// `t(key) || 'fallback'` pattern, which never falls back.
+export const hasKey = (lang, key) => !!(translations[lang]?.[key] || translations['en']?.[key])

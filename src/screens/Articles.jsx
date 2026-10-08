@@ -1,14 +1,14 @@
-import { useState, Fragment } from 'react'
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-} from 'react-native'
+import { useState, useMemo, useCallback, Fragment } from 'react'
+import { View, ScrollView, TextInput, StyleSheet, BackHandler } from 'react-native'
+import { useFocusEffect } from '@react-navigation/native'
 import { NativeAdCard } from '../ads'
 import { useTheme } from '../context/ThemeContext'
+import { useLanguage } from '../context/LanguageContext'
+import {
+  AppText, Card, Chip, EmptyState, Icon, IconBadge, IconButton, Screen, ScreenHeader,
+} from '../components/ui'
+import { RADIUS } from '../theme/palette'
+import { SearchIcon } from './track/parts'
 
 const articles = [
   {
@@ -167,139 +167,175 @@ A gynaecologist who specializes in endometriosis can help with diagnosis and tre
 
 const categories = ['All', 'Cycle Health', 'PCOS', 'Fertility', 'Nutrition', 'Mental Health', 'Endometriosis']
 
+// Category → theme tone + line icon (article data above stays unchanged).
+const CATEGORY_STYLE = {
+  'Cycle Health': { tone: 'period', icon: 'drop' },
+  PCOS: { tone: 'ovulation', icon: 'flower' },
+  Fertility: { tone: 'fertile', icon: 'leaf' },
+  Nutrition: { tone: 'warning', icon: 'sun' },
+  'Mental Health': { tone: 'primary', icon: 'smile' },
+  Endometriosis: { tone: 'danger', icon: 'shield' },
+}
+const styleFor = (category) => CATEGORY_STYLE[category] || { tone: 'primary', icon: 'book' }
+
+// UI labels for the (English) category ids and "N min read" strings.
+const CATEGORY_KEY = {
+  'Cycle Health': 'art_cat_cycle_health',
+  PCOS: 'art_cat_pcos',
+  Fertility: 'art_cat_fertility',
+  Nutrition: 'art_cat_nutrition',
+  'Mental Health': 'art_cat_mental_health',
+  Endometriosis: 'art_cat_endometriosis',
+}
+const categoryLabel = (t, category) => (CATEGORY_KEY[category] ? t(CATEGORY_KEY[category]) : String(category || ''))
+const readTimeLabel = (t, readTime) => {
+  const n = parseInt(String(readTime || ''), 10)
+  return Number.isFinite(n) ? t('art_read_time', { n }) : String(readTime || '')
+}
+
+const Disclaimer = ({ text }) => {
+  const { colors } = useTheme()
+  return (
+    <View style={[styles.disclaimer, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
+      <Icon name="info" size={16} color={colors.textMuted} />
+      <AppText variant="small" muted style={{ flex: 1, fontWeight: '500', lineHeight: 17 }}>{text}</AppText>
+    </View>
+  )
+}
+
+const ArticleCard = ({ article, onPress }) => {
+  const { colors } = useTheme()
+  const { t } = useLanguage()
+  const { tone, icon } = styleFor(article.category)
+  return (
+    <Card onPress={onPress} accessibilityLabel={article.title} style={styles.articleCard}>
+      <IconBadge name={icon} tone={tone} size={46} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <AppText variant="overline" color={colors[tone]}>{categoryLabel(t, article.category)}</AppText>
+        <AppText variant="subheading" style={{ marginTop: 2 }}>{article.title}</AppText>
+        <AppText variant="caption" muted numberOfLines={2} style={{ marginTop: 2 }}>{article.subtitle}</AppText>
+        <View style={styles.readTime}>
+          <Icon name="clock" size={13} color={colors.textFaint} />
+          <AppText variant="small" faint>{readTimeLabel(t, article.readTime)}</AppText>
+        </View>
+      </View>
+      <Icon name="chevron-right" size={18} color={colors.textFaint} />
+    </Card>
+  )
+}
+
 const Articles = ({ navigation }) => {
   const { colors } = useTheme()
+  const { t } = useLanguage()
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedArticle, setSelectedArticle] = useState(null)
 
-  const filtered = articles.filter(a => {
+  const filtered = useMemo(() => articles.filter(a => {
     const matchesCategory = selectedCategory === 'All' || a.category === selectedCategory
     const matchesSearch = searchQuery === '' ||
       a.title.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesCategory && matchesSearch
-  })
+  }), [selectedCategory, searchQuery])
 
-  const styles = makeStyles(colors)
+  // Android back closes an open article first.
+  useFocusEffect(useCallback(() => {
+    if (!selectedArticle) return undefined
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { setSelectedArticle(null); return true })
+    return () => sub.remove()
+  }, [selectedArticle]))
+
+  const goBack = () => {
+    if (navigation?.canGoBack?.()) navigation.goBack()
+  }
 
   // ── ARTICLE DETAIL VIEW ──
   if (selectedArticle) {
+    const { tone, icon } = styleFor(selectedArticle.category)
+    const accent = colors[tone] || colors.primary
     return (
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={styles.scrollContent}
+      <Screen
+        key={`article-${selectedArticle.id}`}
+        header={<ScreenHeader title={categoryLabel(t, selectedArticle.category)} onBack={() => setSelectedArticle(null)} />}
       >
-        <TouchableOpacity
-          activeOpacity={0.6}
-          style={styles.backBtn}
-          onPress={() => setSelectedArticle(null)}
-        >
-          <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>← Back to articles</Text>
-        </TouchableOpacity>
-
-        <View style={[styles.heroCard, { backgroundColor: selectedArticle.color + '15' }]}>
-          <Text style={{ fontSize: 40 }}>{selectedArticle.emoji}</Text>
-          <Text style={[styles.heroCategory, { color: selectedArticle.color }]}>
-            {selectedArticle.category.toUpperCase()}
-          </Text>
-          <Text style={[styles.heroTitle, { color: colors.textPrimary }]}>{selectedArticle.title}</Text>
-          <Text style={[styles.heroSubtitle, { color: colors.textSecondary }]}>{selectedArticle.subtitle}</Text>
-          <Text style={[styles.heroReadTime, { color: colors.textSecondary }]}>⏱ {selectedArticle.readTime}</Text>
+        <View style={[styles.hero, { backgroundColor: colors[`${tone}Soft`] || colors.primarySoft }]}>
+          <IconBadge name={icon} tone={tone} size={56} />
+          <AppText variant="title" center style={{ marginTop: 12 }}>{selectedArticle.title}</AppText>
+          <AppText variant="caption" muted center style={{ marginTop: 6 }}>{selectedArticle.subtitle}</AppText>
+          <View style={[styles.readTime, { marginTop: 10 }]}>
+            <Icon name="clock" size={13} color={colors.textMuted} />
+            <AppText variant="small" muted>{readTimeLabel(t, selectedArticle.readTime)}</AppText>
+          </View>
         </View>
 
-        <View style={styles.articleBody}>
+        <View style={{ marginBottom: 20 }}>
           {selectedArticle.content.split('\n\n').map((para, i) => {
             const isHeading = para === para.toUpperCase() && para.length < 60
-            return (
-              <Text
-                key={i}
-                style={isHeading
-                  ? [styles.paraHeading, { color: selectedArticle.color }]
-                  : [styles.para, { color: colors.textSecondary }]}
-              >
-                {para}
-              </Text>
+            return isHeading ? (
+              <AppText key={i} variant="overline" color={accent} style={styles.paraHeading}>{para}</AppText>
+            ) : (
+              <AppText key={i} variant="body" color={colors.textMuted} style={styles.para}>{para}</AppText>
             )
           })}
         </View>
 
-        <View style={[styles.disclaimer, { backgroundColor: colors.background, borderColor: colors.border }]}>
-          <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
-            ⚕️ This article is for educational purposes only. Please consult a
-            qualified healthcare provider for medical advice.
-          </Text>
-        </View>
-      </ScrollView>
+        <Disclaimer text={t('art_disclaimer_article')} />
+      </Screen>
     )
   }
 
   // ── ARTICLE LIST VIEW ──
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={styles.scrollContent}
+    <Screen
+      key="list"
+      header={(
+        <ScreenHeader
+          title={t('health_articles')}
+          subtitle={t('articles_subtitle')}
+          onBack={navigation?.canGoBack?.() ? goBack : undefined}
+        />
+      )}
     >
-      <TouchableOpacity
-        activeOpacity={0.6}
-        style={styles.backBtn}
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={[styles.backBtnText, { color: colors.textSecondary }]}>← Back</Text>
-      </TouchableOpacity>
-
-      <Text style={[styles.title, { color: colors.textPrimary }]}>{t('health_articles')}</Text>
-      <Text style={[styles.sub, { color: colors.textSecondary }]}>{t('articles_subtitle')}</Text>
-
       {/* Search */}
-      <TextInput
-        style={[styles.search, { borderColor: colors.border, backgroundColor: colors.white, color: colors.textPrimary }]}
-        placeholder="🔍 Search articles..."
-        placeholderTextColor={colors.textSecondary}
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
+      <View style={[styles.search, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+        <SearchIcon size={18} color={colors.textFaint} />
+        <TextInput
+          style={[styles.searchInput, { color: colors.text }]}
+          placeholder={t('trk_search_articles')}
+          placeholderTextColor={colors.textFaint}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          maxFontSizeMultiplier={1.35}
+          accessibilityLabel={t('trk_search_articles')}
+          returnKeyType="search"
+        />
+        {searchQuery ? (
+          <IconButton name="close" size={32} onPress={() => setSearchQuery('')} accessibilityLabel={t('trk_clear')} />
+        ) : null}
+      </View>
 
       {/* Category filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoryScroll}
+        contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+      >
         {categories.map(cat => (
-          <TouchableOpacity
+          <Chip
             key={cat}
-            style={[
-              styles.categoryPill,
-              {
-                backgroundColor: selectedCategory === cat ? colors.pink : colors.white,
-                borderColor: selectedCategory === cat ? colors.pink : colors.border,
-              },
-            ]}
+            label={cat === 'All' ? t('all_filter') : categoryLabel(t, cat)}
+            selected={selectedCategory === cat}
             onPress={() => setSelectedCategory(cat)}
-          >
-            <Text style={{ color: selectedCategory === cat ? 'white' : colors.textSecondary, fontSize: 13, fontWeight: '500' }}>
-              {cat}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </ScrollView>
 
       {/* Article list */}
-      <View style={{ gap: 10, marginTop: 16 }}>
+      <View style={{ gap: 10, marginTop: 14 }}>
         {filtered.map((article, i) => (
           <Fragment key={article.id}>
-            <TouchableOpacity
-              style={[styles.articleCard, { backgroundColor: colors.white, borderColor: colors.border }]}
-              onPress={() => setSelectedArticle(article)}
-            >
-              <View style={[styles.articleIcon, { backgroundColor: article.color + '20' }]}>
-                <Text style={{ fontSize: 22 }}>{article.emoji}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.articleCategory, { color: article.color }]}>{article.category}</Text>
-                <Text style={[styles.articleTitle, { color: colors.textPrimary }]}>{article.title}</Text>
-                <Text style={[styles.articleSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>
-                  {article.subtitle}
-                </Text>
-                <Text style={[styles.articleReadTime, { color: colors.textSecondary }]}>⏱ {article.readTime}</Text>
-              </View>
-            </TouchableOpacity>
+            <ArticleCard article={article} onPress={() => setSelectedArticle(article)} />
             {/* In-feed native ad after the 3rd article (highest-eCPM format) */}
             {i === 2 && <NativeAdCard />}
           </Fragment>
@@ -307,127 +343,46 @@ const Articles = ({ navigation }) => {
       </View>
 
       {filtered.length === 0 && (
-        <View style={{ alignItems: 'center', padding: 40 }}>
-          <Text style={{ fontSize: 36, marginBottom: 10 }}>🔍</Text>
-          <Text style={{ color: colors.textSecondary }}>{t('no_articles_found')}</Text>
-        </View>
+        <EmptyState icon="book" title={t('no_articles_found')} />
       )}
 
-      <View style={[styles.disclaimer, { backgroundColor: colors.background, borderColor: colors.border, marginTop: 16 }]}>
-        <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
-          ⚕️ These articles are for educational purposes only and do not
-          constitute medical advice.
-        </Text>
+      <View style={{ marginTop: 16 }}>
+        <Disclaimer text={t('art_disclaimer_list')} />
       </View>
-
-    </ScrollView>
+    </Screen>
   )
 }
 
-const makeStyles = (colors) => StyleSheet.create({
-  container: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 60 },
-  backBtn: { paddingVertical: 8, marginBottom: 4 },
-  backBtnText: { fontSize: 14 },
-  title: { fontSize: 22, fontWeight: '700' },
-  sub: { fontSize: 13, marginBottom: 16, marginTop: 2 },
+const styles = StyleSheet.create({
   search: {
-    borderWidth: 1.5,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 14,
-    marginBottom: 12,
-  },
-  categoryScroll: { marginBottom: 4 },
-  categoryPill: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    marginRight: 8,
-  },
-  articleCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
+    gap: 8,
+    borderWidth: 1.5,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 12,
+    minHeight: 48,
+    marginBottom: 12,
   },
-  articleIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  articleCategory: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    marginBottom: 2,
-  },
-  articleTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 3,
-  },
-  articleSubtitle: {
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 4,
-  },
-  articleReadTime: {
-    fontSize: 11,
-  },
+  searchInput: { flex: 1, fontSize: 16, paddingVertical: 10 },
+  categoryScroll: { flexGrow: 0 },
+  articleCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  readTime: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
   disclaimer: {
-    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 8,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     padding: 12,
   },
-  heroCard: {
-    borderRadius: 20,
+  hero: {
+    borderRadius: RADIUS.xl,
     padding: 24,
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  heroCategory: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 8,
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  heroTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    textAlign: 'center',
-    lineHeight: 27,
-    marginBottom: 8,
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 8,
-  },
-  heroReadTime: {
-    fontSize: 12,
-  },
-  articleBody: {
-    marginBottom: 20,
-  },
-  paraHeading: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  para: {
-    fontSize: 14,
-    lineHeight: 22,
-    marginBottom: 4,
-  },
+  paraHeading: { marginTop: 18, marginBottom: 6 },
+  para: { lineHeight: 23, marginBottom: 4 },
 })
 
 export default Articles
