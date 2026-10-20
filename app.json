@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FA035B"
       },
-      "package": "com.mycycleapp.periodtracker"
+      "package": "com.mycycleapp.periodtracker",
+      "allowBackup": false
     },
     "plugins": [
       [

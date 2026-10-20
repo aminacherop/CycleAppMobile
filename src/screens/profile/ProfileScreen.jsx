@@ -107,7 +107,10 @@ export default function ProfileScreen({ navigation }) {
           <ListRow
             icon="refresh" tone="period"
             title={t('pf_cycle_period')}
-            value={t('pf_cycle_value', { c: settings.cycleLength, p: settings.periodLength })}
+            value={t('pf_cycle_value', {
+              c: app.cycleState?.averages?.cycleLength || settings.cycleLength,
+              p: app.cycleState?.averages?.periodLength || settings.periodLength,
+            })}
             onPress={() => navigation.navigate('CycleSettings')}
           />
           <ListRow

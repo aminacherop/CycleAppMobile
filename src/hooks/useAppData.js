@@ -25,6 +25,7 @@ import {
 } from '../utils/notifications'
 import { syncMedicationReminders } from '../utils/medications'
 import { useLanguage } from '../context/LanguageContext'
+import { useTheme } from '../context/ThemeContext'
 
 const todayStr = () => dayjs().format('YYYY-MM-DD')
 const DEFAULT_PROFILE = { name: '', dob: '', condition: 'none', email: '', phone: '' }
@@ -34,7 +35,8 @@ const DEFAULT_SETTINGS = { cycleLength: 28, periodLength: 5, lastPeriodStart: nu
 const RESCHEDULE_DEBOUNCE_MS = 1500
 
 const useAppData = () => {
-  const { t, language } = useLanguage()
+  const { t, language, resetLanguage } = useLanguage()
+  const { resetTheme } = useTheme()
   const tRef = useRef(t)
   tRef.current = t
 
@@ -139,7 +141,8 @@ const useAppData = () => {
 
   // ── DERIVED CYCLE DATA ──────────────────────────
   const engineSettings = useMemo(() => CE.normalizeSettings(cycleSettings),
-    [cycleSettings.cycleLength, cycleSettings.periodLength, cycleSettings.lutealLength])
+    [cycleSettings.cycleLength, cycleSettings.periodLength, cycleSettings.lutealLength,
+      cycleSettings.cycleLengthManual, cycleSettings.periodLengthManual, cycleSettings.periodEndedOn])
   const cycleState = useMemo(() => CE.getCycleState(periodDays, engineSettings, today),
     [periodDays, engineSettings, today])
   const cycleContext = useMemo(() => CE.buildCycleContext(periodDays, engineSettings, today),
@@ -211,8 +214,16 @@ const useAppData = () => {
     return next
   }, [updatePeriodDays])
 
-  const endPeriod = useCallback((date = todayRef.current) =>
-    updatePeriodDays(days => CE.endPeriod(days, date)), [updatePeriodDays])
+  // Remember the explicit end so the engine doesn't re-extend the period to
+  // its average length while today is still its last day.
+  const endPeriod = useCallback(async (date = todayRef.current) => {
+    const d = CE.toDateStr(date) || todayRef.current
+    const [next] = await Promise.all([
+      updatePeriodDays(days => CE.endPeriod(days, d)),
+      commitSettings({ ...settingsRef.current, periodEndedOn: d }),
+    ])
+    return next
+  }, [updatePeriodDays, commitSettings])
 
   const setPeriodRange = useCallback((start, end) =>
     updatePeriodDays(days => CE.setPeriodRange(days, start, end)), [updatePeriodDays])
@@ -260,12 +271,18 @@ const useAppData = () => {
     const prev = settingsRef.current
     const next = typeof updater === 'function' ? updater(prev) : updater
     const requestedStart = CE.toDateStr(next?.lastPeriodStart)
+    const prevLength = currentPeriodLength()
     // lastPeriodStart is derived from periodDays; never accept it directly.
     await commitSettings({ ...prev, ...(next || {}), lastPeriodStart: prev.lastPeriodStart })
+    // A new effective period length re-fits the expected days of a period in progress.
+    const nextLength = currentPeriodLength()
+    if (nextLength !== prevLength) {
+      await updatePeriodDays(days => CE.resizeOngoingPeriod(days, nextLength, todayRef.current))
+    }
     if (requestedStart && requestedStart !== prev.lastPeriodStart && requestedStart <= todayRef.current) {
       await movePeriodStart(requestedStart)
     }
-  }, [commitSettings, movePeriodStart])
+  }, [commitSettings, movePeriodStart, updatePeriodDays])
 
   // ── DAILY LOGS ───────────────────────────────────
   /**
@@ -355,7 +372,10 @@ const useAppData = () => {
     setPeriodDays([])
     setCalendarEdits({})
     setNotificationPrefs(normalizePrefs(null))
-  }, [])
+    // Storage is empty now; put language and theme back to first-install defaults too.
+    resetLanguage?.()
+    resetTheme?.()
+  }, [resetLanguage, resetTheme])
 
   return {
     loading,

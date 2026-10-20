@@ -28,12 +28,40 @@ export const DayMarkerIcon = memo(({ kind, size = 10 }) => {
   )
 })
 
+/** Cycle-day number shown next to the marker, tinted to match the marker. */
+export const CycleDayNum = memo(({ n, kind }) => {
+  const { colors } = useTheme()
+  if (!n) return null
+  const color = kind === 'fertile' ? colors.fertile
+    : kind === 'ovulation' ? colors.ovulation
+      : kind ? colors.period : colors.textFaint
+  return (
+    <AppText
+      variant="small"
+      color={color}
+      style={{ fontSize: 9, lineHeight: 12, fontWeight: kind ? '700' : '600', opacity: kind === 'predicted' ? 0.55 : kind ? 0.9 : 0.8 }}
+      maxFontSizeMultiplier={1}
+      numberOfLines={1}
+    >
+      {n}
+    </AppText>
+  )
+})
+
+// Faint inner grid lines: each cell draws its right/bottom edge unless it
+// sits in the last column/row, so the card edge stays the only frame.
+export const gridLines = (lastCol, lastRow, color) => ({
+  borderColor: color,
+  borderRightWidth: lastCol ? 0 : StyleSheet.hairlineWidth,
+  borderBottomWidth: lastRow ? 0 : StyleSheet.hairlineWidth,
+})
+
 /**
  * One calendar day. Primitive props only so React.memo skips cells whose
  * state didn't change (e.g. when only the selection moves).
  */
 export const DayCell = memo(({
-  date, dayNum, kind, isToday, isSelected, hasLog, cellW, circle, onPress, label,
+  date, dayNum, kind, cycleDay, isToday, isSelected, hasLog, cellW, circle, lastCol, lastRow, onPress, label,
 }) => {
   const { colors } = useTheme()
   let fill = 'transparent'
@@ -65,7 +93,8 @@ export const DayCell = memo(({
       accessibilityState={{ selected: !!isSelected }}
       style={[
         styles.cell,
-        { width: cellW, paddingVertical: 3, borderRadius: 14 },
+        { width: cellW },
+        gridLines(lastCol, lastRow, colors.border),
         isSelected && { backgroundColor: colors.primarySoft },
       ]}
     >
@@ -76,14 +105,15 @@ export const DayCell = memo(({
         ]}
       >
         <DayCircle size={circle} fill={fill} stroke={stroke} dashed={!!stroke}>
-          <AppText variant="caption" color={numColor} style={{ fontWeight: weight, fontSize: circle >= 40 ? 15 : 13.5 }} maxFontSizeMultiplier={1.15}>
+          <AppText variant="caption" color={numColor} style={{ fontWeight: weight, fontSize: circle >= 40 ? 16 : 14.5 }} maxFontSizeMultiplier={1.15}>
             {dayNum}
           </AppText>
         </DayCircle>
         {hasLog ? <View style={[styles.logDot, { backgroundColor: colors.primary, borderColor: colors.surface }]} /> : null}
       </View>
       <View style={styles.markerRow}>
-        <DayMarkerIcon kind={kind} size={10} />
+        {kind ? <DayMarkerIcon kind={kind} size={10} /> : null}
+        <CycleDayNum n={cycleDay} kind={kind} />
       </View>
     </Pressable>
   )
@@ -103,33 +133,47 @@ export const WeekdayRow = memo(({ labels, cellW }) => (
  * Month grid. `weeks` comes from getMonthGrid. Only the cells whose props
  * changed re-render when `selected` moves.
  */
-export const MonthGrid = memo(({ weeks, selected, today, logDays, cellW, circle, onPress, formatLabel }) => (
-  <View>
-    {(weeks || []).map((week, wi) => (
-      <View key={wi} style={styles.row}>
-        {(week || []).map((info, di) => {
-          if (!info) return <View key={`b${di}`} style={{ width: cellW }} />
-          const d = info.date
-          return (
-            <DayCell
-              key={d}
-              date={d}
-              dayNum={Number(d.slice(8, 10))}
-              kind={markerKind(info)}
-              isToday={d === today}
-              isSelected={d === selected}
-              hasLog={!!logDays?.has(d)}
-              cellW={cellW}
-              circle={circle}
-              onPress={onPress}
-              label={formatLabel ? formatLabel(d) : d}
-            />
-          )
-        })}
-      </View>
-    ))}
-  </View>
-))
+export const MonthGrid = memo(({ weeks, selected, today, logDays, cellW, circle, onPress, formatLabel }) => {
+  const { colors } = useTheme()
+  const rows = weeks || []
+  return (
+    <View>
+      {rows.map((week, wi) => {
+        const lastRow = wi === rows.length - 1
+        return (
+          <View key={wi} style={styles.row}>
+            {(week || []).map((info, di) => {
+              const lastCol = di === 6
+              if (!info) {
+                return <View key={`b${di}`} style={[{ width: cellW }, gridLines(lastCol, lastRow, colors.border)]} />
+              }
+              const d = info.date
+              const cycleDay = Number.isFinite(info.cycleDay) && info.cycleDay > 0 ? info.cycleDay : null
+              return (
+                <DayCell
+                  key={d}
+                  date={d}
+                  dayNum={Number(d.slice(8, 10))}
+                  kind={markerKind(info)}
+                  cycleDay={cycleDay}
+                  isToday={d === today}
+                  isSelected={d === selected}
+                  hasLog={!!logDays?.has(d)}
+                  cellW={cellW}
+                  circle={circle}
+                  lastCol={lastCol}
+                  lastRow={lastRow}
+                  onPress={onPress}
+                  label={formatLabel ? formatLabel(d, cycleDay) : d}
+                />
+              )
+            })}
+          </View>
+        )
+      })}
+    </View>
+  )
+})
 
 export const Legend = memo(({ t }) => {
   const items = [
@@ -152,9 +196,9 @@ export const Legend = memo(({ t }) => {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row' },
-  cell: { alignItems: 'center' },
+  cell: { alignItems: 'center', paddingVertical: 4 },
   center: { alignItems: 'center', justifyContent: 'center' },
-  markerRow: { height: 13, marginTop: 1, alignItems: 'center', justifyContent: 'center' },
+  markerRow: { height: 14, marginTop: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
   logDot: { position: 'absolute', top: 1, right: 1, width: 7, height: 7, borderRadius: 4, borderWidth: 1 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', columnGap: 16, rowGap: 6, marginTop: 10 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },

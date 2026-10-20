@@ -16,6 +16,7 @@ import { loadData } from '../../utils/storage'
 import { successHaptic } from '../../utils/haptics'
 import { MOODS, WATER_GOAL } from '../../constants/logOptions'
 import CycleRing from './CycleRing'
+import EndPeriodSheet from './EndPeriodSheet'
 
 // ── Week strip ────────────────────────────────────────────────────────
 const WeekDay = memo(({ date, label, num, info, onPress, colors, size }) => {
@@ -64,6 +65,7 @@ export default function HomeScreen({ navigation }) {
   const [sheetDate, setSheetDate] = useState(null)
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState(null)
+  const [endOpen, setEndOpen] = useState(false)
   const [pregnancy, setPregnancy] = useState(null)
   const toastTimer = useRef(null)
 
@@ -155,10 +157,12 @@ export default function HomeScreen({ navigation }) {
     } : null)
   })
 
-  const endPeriodToday = () => run(async () => {
+  // Only called from the confirmation sheet, with the day the user picked.
+  const endPeriodOn = (date) => run(async () => {
     const start = cs.lastPeriodStart
     const prevEnd = runEnd || cs.expectedPeriodEnd
-    await app.endPeriod(today)
+    await app.endPeriod(date)
+    setEndOpen(false)
     successHaptic()
     showToast(t('home_period_end_saved'), start && prevEnd ? async () => {
       try { await app.setPeriodRange(start, prevEnd) } catch {}
@@ -199,7 +203,7 @@ export default function HomeScreen({ navigation }) {
           <AppText variant="display" center color={colors.period} style={{ fontSize: Math.round(ringSize * 0.17) }} numberOfLines={1} adjustsFontSizeToFit>
             {t('home_period_day', { n: cs.cycleDay })}
           </AppText>
-          {cs.expectedPeriodEnd ? (
+          {cs.expectedPeriodEnd && cs.expectedPeriodEnd !== today ? (
             <AppText variant="small" muted center>{t('home_ends_around', { date: formatDate(cs.expectedPeriodEnd, 'MMM D', language) })}</AppText>
           ) : null}
         </>
@@ -343,11 +347,15 @@ export default function HomeScreen({ navigation }) {
                 <IconBadge name="check" tone="period" size={34} />
                 <AppText variant="caption" muted style={{ flex: 1 }}>{t('home_period_ends_today')}</AppText>
               </Card>
-            ) : cs.isOnPeriod ? (
-              <Button title={t('home_period_ended')} icon="check" onPress={endPeriodToday} loading={busy} />
+            ) : null}
+            {cs.isOnPeriod ? (
+              <Button title={t('home_log_flow')} icon="drop" onPress={() => openLog()} />
             ) : (
               <Button title={t('home_log_period')} icon="drop" onPress={logPeriodToday} loading={busy} />
             )}
+            {cs.isOnPeriod && runEnd !== today ? (
+              <Button title={t('home_ended_early')} variant="ghost" size="sm" icon="check" onPress={() => setEndOpen(true)} />
+            ) : null}
             {cs.hasData ? (
               <Button title={t('home_edit_dates')} variant="ghost" size="sm" icon="edit"
                 onPress={() => navigation.navigate('CalendarTab', { screen: 'EditPeriod', initial: false })} />
@@ -419,6 +427,15 @@ export default function HomeScreen({ navigation }) {
       </Screen>
 
       <UndoToast toast={toast} onUndo={undo} colors={colors} t={t} />
+      <EndPeriodSheet
+        visible={endOpen}
+        onClose={() => setEndOpen(false)}
+        onSave={endPeriodOn}
+        saving={busy}
+        start={cs.lastPeriodStart}
+        expectedEnd={[runEnd, cs.expectedPeriodEnd].filter(Boolean).sort().pop()}
+        today={today}
+      />
       <DaySheet date={sheetDate} visible={!!sheetDate} onClose={() => setSheetDate(null)} navigation={navigation} />
     </View>
   )

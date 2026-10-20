@@ -12,6 +12,8 @@
  *
  * settings: the user's DEFAULTS { cycleLength, periodLength, lutealLength? }.
  * They are only used until enough real history exists to learn from.
+ * cycleLengthManual / periodLengthManual (number | null) pin a value the user
+ * chose; they win over both learned and default values.
  */
 import dayjs from 'dayjs'
 
@@ -63,12 +65,24 @@ export const normalizeSettings = (settings = {}) => {
     cycleLength: Number.isFinite(c) && c > 0 ? clamp(c, MIN_VALID_CYCLE, MAX_VALID_CYCLE) : DEFAULT_CYCLE_LENGTH,
     periodLength: Number.isFinite(p) && p > 0 ? clamp(p, 1, 15) : DEFAULT_PERIOD_LENGTH,
     lutealLength: Number.isFinite(l) && l > 0 ? clamp(l, 9, 18) : DEFAULT_LUTEAL_LENGTH,
+    cycleLengthManual: manualValue(settings?.cycleLengthManual, MIN_VALID_CYCLE, MAX_VALID_CYCLE),
+    periodLengthManual: manualValue(settings?.periodLengthManual, 1, 15),
+    // Last day the user explicitly marked as "period ended" (see getCycleState).
+    periodEndedOn: isValidDateStr(settings?.periodEndedOn) ? settings.periodEndedOn : null,
   }
 }
+function manualValue(v, lo, hi) {
+  const n = Math.round(Number(v))
+  return v != null && v !== '' && typeof v !== 'boolean' && Number.isFinite(n) && n > 0 ? clamp(n, lo, hi) : null
+}
 
-/** Days from period start to ovulation for a cycle of `cycleLength` days. */
+/**
+ * Days from period start to ovulation for a cycle of `cycleLength` days.
+ * The luteal phase is the days AFTER ovulation up to the next period, so a
+ * 28-day cycle with a 14-day luteal phase ovulates on cycle day 14 (offset 13).
+ */
 export const ovulationOffset = (cycleLength, lutealLength = DEFAULT_LUTEAL_LENGTH) =>
-  Math.max(MIN_OVULATION_CYCLE_DAY - 1, cycleLength - lutealLength)
+  Math.max(MIN_OVULATION_CYCLE_DAY - 1, cycleLength - lutealLength - 1)
 
 const windowFromOvulation = (ov) => ({
   ovulationDate: ov,
@@ -160,8 +174,9 @@ const regularityScore = (lengths) => {
 /**
  * Returns {
  *   cycleLength, periodLength, lutealLength,
- *   source: 'learned' | 'default',          // for cycleLength
- *   periodLengthSource: 'learned' | 'default',
+ *   source: 'manual' | 'learned' | 'default', // for cycleLength
+ *   periodLengthSource: 'manual' | 'learned' | 'default',
+ *   learnedCycleLength, learnedPeriodLength, // from history, null until learned
  *   cyclesUsed,                             // valid completed cycles (15–60 days)
  *   regularity: 0-100 | null,
  *   cycleLengths: number[],                 // valid completed cycle lengths, oldest first
@@ -185,12 +200,18 @@ export const getAverages = (periodDays, settings, today) => {
   if (history.current && history.current.end < t) periodLengths.push(history.current.periodLength)
   const learnedPeriod = periodLengths.length >= 2
 
+  const learnedCycleLength = learnedCycle ? weightedAverage(valid) : null
+  const learnedPeriodLength = learnedPeriod ? weightedAverage(periodLengths) : null
+  const sourceOf = (manual, learned) => (manual != null ? 'manual' : learned ? 'learned' : 'default')
+
   return {
-    cycleLength: learnedCycle ? weightedAverage(valid) : s.cycleLength,
-    periodLength: learnedPeriod ? weightedAverage(periodLengths) : s.periodLength,
+    cycleLength: s.cycleLengthManual ?? learnedCycleLength ?? s.cycleLength,
+    periodLength: s.periodLengthManual ?? learnedPeriodLength ?? s.periodLength,
     lutealLength: s.lutealLength,
-    source: learnedCycle ? 'learned' : 'default',
-    periodLengthSource: learnedPeriod ? 'learned' : 'default',
+    source: sourceOf(s.cycleLengthManual, learnedCycle),
+    periodLengthSource: sourceOf(s.periodLengthManual, learnedPeriod),
+    learnedCycleLength,
+    learnedPeriodLength,
     cyclesUsed: valid.length,
     regularity: regularityScore(valid),
     cycleLengths: valid,
@@ -262,9 +283,12 @@ export const getCycleState = (periodDays, settings, today) => {
   // On period only if today is inside the logged run. Logging a start already
   // fills in the expected days, and "period ended" trims them, so guessing
   // beyond the run would override the user's explicit end.
+  // A period the user explicitly ended on its last logged day doesn't get
+  // stretched back to the average length (e.g. "ended" today on day 1).
   const isOnPeriod = t >= cur.start && t <= cur.end
+  const endedHere = normalizeSettings(settings).periodEndedOn === cur.end
   const expectedPeriodEnd = isOnPeriod
-    ? (cur.end > addDays(cur.start, PL - 1) ? cur.end : addDays(cur.start, PL - 1))
+    ? (endedHere || cur.end > addDays(cur.start, PL - 1) ? cur.end : addDays(cur.start, PL - 1))
     : null
 
   const isLate = t > nextPeriodStart
@@ -588,6 +612,22 @@ export const clearPeriodDay = (periodDays, date, today) => {
   const days = normalizePeriodDays(periodDays)
   const run = findPeriodContaining(days, d)
   return days.filter(x => x !== d && !(run && x > d && x <= run.end && x > t))
+}
+
+/**
+ * Period length changed while a period is in progress: re-fit the still-
+ * future (expected) days of that period to `length`. Past days are never
+ * touched, and a period with no future days (explicitly ended) is left alone.
+ */
+export const resizeOngoingPeriod = (periodDays, length, today) => {
+  const t = todayStr(today)
+  const days = normalizePeriodDays(periodDays)
+  const run = derivePeriods(days).find(p => p.start <= t && p.end > t)
+  if (!run) return days
+  const len = clamp(Math.round(Number(length)) || DEFAULT_PERIOD_LENGTH, 1, 15)
+  const target = addDays(run.start, len - 1)
+  const kept = days.filter(d => !(d > t && d <= run.end))
+  return target > t ? addPeriodDays(kept, daysBetween(addDays(t, 1), target)) : kept
 }
 
 /** Remove the whole period (run) that contains `start`. */

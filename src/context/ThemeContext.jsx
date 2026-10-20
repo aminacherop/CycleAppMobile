@@ -24,13 +24,16 @@ export const ThemeProvider = ({ children }) => {
     await saveData('app_theme', t)
   }
 
+  // "Delete all data": back to following the system theme.
+  const resetTheme = () => setTheme('system')
+
   const isDark = theme === 'dark' ||
     (theme === 'system' && systemScheme === 'dark')
 
   const colors = isDark ? COLORS.dark : COLORS.light
 
   return (
-    <ThemeContext.Provider value={{ theme, changeTheme, isDark, colors }}>
+    <ThemeContext.Provider value={{ theme, changeTheme, resetTheme, isDark, colors }}>
       {children}
     </ThemeContext.Provider>
   )

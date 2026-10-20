@@ -56,11 +56,19 @@ export const LanguageProvider = ({ children }) => {
     return false
   }
 
+  // "Delete all data": back to first-run behaviour (device language, not chosen).
+  const resetLanguage = () => {
+    const lang = detectDeviceLanguage()
+    if (I18nManager.isRTL !== isRTL(lang)) I18nManager.forceRTL(isRTL(lang))
+    setLanguage(lang)
+    setLanguageChosen(false)
+  }
+
   const t = (key, replacements = {}) => translate(language, key, replacements)
 
   return (
     <LanguageContext.Provider
-      value={{ language, changeLanguage, t, loading, languageChosen, languages: LANGUAGES }}
+      value={{ language, changeLanguage, resetLanguage, t, loading, languageChosen, languages: LANGUAGES }}
     >
       {children}
     </LanguageContext.Provider>

@@ -155,12 +155,20 @@ const cancelWhere = async (predicate) => {
 export const cancelCycleReminders = () =>
   cancelWhere(id => id.startsWith(CYCLE_PREFIX) || LEGACY_IDS.has(id))
 
-/** Cancels EVERYTHING (cycle + medication). Only for "delete all data". */
+/**
+ * Cancels EVERYTHING (cycle + medication) and clears notifications already
+ * showing in the notification shade. Only for "delete all data".
+ */
 export const cancelAllScheduledNotifications = async () => {
   try {
     await Notifications.cancelAllScheduledNotificationsAsync()
   } catch (err) {
     console.error('Cancel all error:', err)
+  }
+  try {
+    await Notifications.dismissAllNotificationsAsync()
+  } catch (err) {
+    console.error('Dismiss all error:', err)
   }
 }
 

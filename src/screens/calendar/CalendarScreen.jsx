@@ -51,7 +51,10 @@ export default function CalendarScreen({ navigation }) {
     return set
   }, [dailyLogs])
   const weekdays = useMemo(() => weekdayInitials(language), [language])
-  const formatLabel = useCallback((d) => formatDate(d, 'dddd, MMMM D', language), [language])
+  const formatLabel = useCallback((d, cycleDay) => {
+    const day = formatDate(d, 'dddd, MMMM D', language)
+    return cycleDay ? `${day}, ${t('cal_cycle_day_n', { n: cycleDay })}` : day
+  }, [language, t])
 
   // ── month transition + swipe ──
   const tx = useSharedValue(0)
@@ -167,7 +170,7 @@ export default function CalendarScreen({ navigation }) {
 
         <View style={{ alignItems: 'center', marginTop: 8 }} {...pan.panHandlers}>
           <WeekdayRow labels={weekdays} cellW={cellW} />
-          <Animated.View style={[{ marginTop: 4, minHeight: (circle + 26) * 5 }, gridStyle]}>
+          <Animated.View style={[{ marginTop: 4, minHeight: (circle + 31) * 5 }, gridStyle]}>
             <MonthGrid
               weeks={grid.weeks}
               selected={sel}

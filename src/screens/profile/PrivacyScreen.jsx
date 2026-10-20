@@ -44,6 +44,7 @@ export default function PrivacyScreen({ navigation }) {
         style: 'destructive',
         onPress: () => Alert.alert(t('pf_delete_sure_title'), t('pf_delete_sure_body'), [
           { text: t('cancel'), style: 'cancel' },
+          // Android stacks 3 buttons last-on-top: keep the safe choice on top.
           {
             text: t('pf_delete_everything'),
             style: 'destructive',
@@ -59,6 +60,7 @@ export default function PrivacyScreen({ navigation }) {
               }
             },
           },
+          { text: t('pf_backup_first'), onPress: () => navigation.navigate('Backup') },
         ]),
       },
     ])

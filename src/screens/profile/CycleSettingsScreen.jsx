@@ -25,8 +25,11 @@ export default function CycleSettingsScreen({ navigation }) {
 
   const s = normalizeSettings(app.cycleSettings)
   const avg = app.cycleState?.averages || {}
-  const learned = avg.source === 'learned'
-  const learnedPeriod = avg.periodLengthSource === 'learned'
+  const learned = avg.learnedCycleLength != null
+  const learnedPeriod = avg.learnedPeriodLength != null
+  // Values in use everywhere (manual, learned or default).
+  const cycleValue = avg.cycleLength || s.cycleLength
+  const periodValue = avg.periodLength || s.periodLength
 
   const save = useCallback(async (partial) => {
     try {
@@ -37,8 +40,13 @@ export default function CycleSettingsScreen({ navigation }) {
     }
   }, [app.updateCycleSettings, flash])
 
-  const onCycle = useCallback((v) => { if (v !== s.cycleLength) save({ cycleLength: v }) }, [s.cycleLength, save])
-  const onPeriod = useCallback((v) => { if (v !== s.periodLength) save({ periodLength: v }) }, [s.periodLength, save])
+  // Moving a wheel pins that value (manual); "Use automatic" hands it back to learning.
+  const onCycle = useCallback((v) => {
+    if (v !== cycleValue) save({ cycleLengthManual: v })
+  }, [cycleValue, save])
+  const onPeriod = useCallback((v) => {
+    if (v !== periodValue) save({ periodLengthManual: v })
+  }, [periodValue, save])
   const fmt = useCallback((v) => String(v), [])
 
   const luteal = s.lutealLength || DEFAULT_LUTEAL_LENGTH
@@ -49,9 +57,15 @@ export default function CycleSettingsScreen({ navigation }) {
 
   const narrow = width < 360
   const wheels = useMemo(() => ([
-    { key: 'c', label: t('cycle_length'), values: CYCLE_VALUES, value: s.cycleLength, onChange: onCycle, tone: 'primary' },
-    { key: 'p', label: t('period_length'), values: PERIOD_VALUES, value: s.periodLength, onChange: onPeriod, tone: 'period' },
-  ]), [t, s.cycleLength, s.periodLength, onCycle, onPeriod])
+    {
+      key: 'c', label: t('cycle_length'), values: CYCLE_VALUES, value: cycleValue, onChange: onCycle,
+      manual: s.cycleLengthManual != null, onAuto: () => save({ cycleLengthManual: null }),
+    },
+    {
+      key: 'p', label: t('period_length'), values: PERIOD_VALUES, value: periodValue, onChange: onPeriod,
+      manual: s.periodLengthManual != null, onAuto: () => save({ periodLengthManual: null }),
+    },
+  ]), [t, cycleValue, periodValue, s.cycleLengthManual, s.periodLengthManual, onCycle, onPeriod, save])
 
   return (
     <Screen header={<BackHeader navigation={navigation} title={t('pf_cycle_period')} saved={saved} />}>
@@ -61,13 +75,13 @@ export default function CycleSettingsScreen({ navigation }) {
             <IconBadge name={learned ? 'sparkle' : 'info'} tone={learned ? 'success' : 'info'} />
             <View style={{ flex: 1 }}>
               <AppText variant="subheading">{learned ? t('pf_learned_title') : t('pf_defaults_title')}</AppText>
-              <AppText variant="caption" muted style={{ marginTop: 2 }}>{t('pf_learned_explain')}</AppText>
+              <AppText variant="caption" muted style={{ marginTop: 2 }}>{t('pf_auto_explain')}</AppText>
             </View>
           </View>
           {learned || learnedPeriod ? (
             <View style={[styles.stats, { borderTopColor: colors.border }]}>
-              <Stat label={t('pf_avg_cycle')} value={nDays(t, avg.cycleLength)} show={learned} />
-              <Stat label={t('pf_avg_period')} value={nDays(t, avg.periodLength)} show={learnedPeriod} />
+              <Stat label={t('pf_avg_cycle')} value={nDays(t, avg.learnedCycleLength)} show={learned} />
+              <Stat label={t('pf_avg_period')} value={nDays(t, avg.learnedPeriodLength)} show={learnedPeriod} />
               <Stat label={t('pf_cycles_logged')} value={String(avg.cyclesUsed || 0)} show />
             </View>
           ) : null}
@@ -87,7 +101,8 @@ export default function CycleSettingsScreen({ navigation }) {
                 format={fmt}
                 accessibilityLabel={w.label}
               />
-              <AppText variant="small" muted center style={{ marginBottom: 12 }}>{t('days')}</AppText>
+              <AppText variant="small" muted center>{t('days')}</AppText>
+              <ModeFooter manual={w.manual} onAuto={w.onAuto} t={t} />
             </Card>
           ))}
         </View>
@@ -122,6 +137,27 @@ export default function CycleSettingsScreen({ navigation }) {
   )
 }
 
+// Under each wheel: "Automatic" badge, or a link back to automatic when pinned.
+const ModeFooter = ({ manual, onAuto, t }) => {
+  const { colors } = useTheme()
+  if (manual) {
+    return (
+      <Tap onPress={onAuto} haptic hitSlop={6} style={styles.modeRow} accessibilityRole="button" accessibilityLabel={t('pf_use_auto')}>
+        <Icon name="refresh" size={14} color={colors.primary} />
+        <AppText variant="small" color={colors.primary} style={{ fontWeight: '700' }} numberOfLines={1}>{t('pf_use_auto')}</AppText>
+      </Tap>
+    )
+  }
+  return (
+    <View style={styles.modeRow}>
+      <View style={[styles.autoPill, { backgroundColor: colors.successSoft }]}>
+        <Icon name="sparkle" size={12} color={colors.success} />
+        <AppText variant="small" color={colors.success} style={{ fontWeight: '700' }} numberOfLines={1}>{t('pf_auto')}</AppText>
+      </View>
+    </View>
+  )
+}
+
 const Stat = ({ label, value, show }) => {
   if (!show) return null
   return (
@@ -138,4 +174,6 @@ const styles = StyleSheet.create({
   wheels: { flexDirection: 'row', gap: 12 },
   wheelCard: { overflow: 'hidden' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  modeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, minHeight: 44, marginBottom: 4 },
+  autoPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
 })

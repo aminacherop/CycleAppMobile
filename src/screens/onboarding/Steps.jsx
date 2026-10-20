@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useRef } from 'react'
-import { View, TextInput, StyleSheet, useWindowDimensions } from 'react-native'
+import { View, TextInput, Image, StyleSheet, useWindowDimensions } from 'react-native'
 import { useTheme } from '../../context/ThemeContext'
 import { useLanguage } from '../../context/LanguageContext'
 import { AppText, Card, IconBadge, Icon, Tap, WheelPicker, FadeIn } from '../../components/ui'
@@ -253,8 +253,56 @@ export const GoalStep = memo(({ layout, value, setValue, onNext }) => {
 })
 
 // ── 7. Reminders ───────────────────────────────────────────────────────
-export const RemindersStep = memo(({ layout, onEnable, onSkip, busy }) => {
+const APP_ICON = require('../../../assets/icon.png')
+
+// One fake notification inside the phone preview.
+const PreviewNotification = ({ title, body, when, faded }) => {
   const { colors } = useTheme()
+  return (
+    <View style={[styles.notif, { backgroundColor: colors.surface, opacity: faded ? 0.6 : 1 }, faded && { transform: [{ scale: 0.96 }] }]}>
+      <View style={styles.notifHead}>
+        <Image source={APP_ICON} style={styles.notifIcon} />
+        <AppText variant="small" muted numberOfLines={1} style={{ flex: 1 }}>My Cycle · {when}</AppText>
+      </View>
+      <AppText variant="bodyStrong" numberOfLines={1} style={{ marginTop: 4 }}>{title}</AppText>
+      <AppText variant="caption" muted numberOfLines={2}>{body}</AppText>
+    </View>
+  )
+}
+
+// A mini lock screen, so the preview reads as "what will pop up on your
+// phone" and never as a real message about the user's cycle.
+const PhonePreview = () => {
+  const { colors } = useTheme()
+  const { t } = useLanguage()
+  return (
+    <View
+      style={[styles.phone, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+      accessible
+      accessibilityLabel={`${t('ob_preview_note')}: ${t('ob_preview_title')}. ${t('ob_remind_preview')}`}
+    >
+      <View style={styles.statusBar} importantForAccessibility="no-hide-descendants">
+        <AppText variant="small" muted style={{ fontWeight: '700' }}>9:41</AppText>
+        <View style={styles.statusIcons}>
+          {[5, 8, 11].map((h) => <View key={h} style={[styles.signalBar, { height: h, backgroundColor: colors.textMuted }]} />)}
+          <View style={[styles.battery, { borderColor: colors.textMuted }]}>
+            <View style={[styles.batteryFill, { backgroundColor: colors.textMuted }]} />
+          </View>
+        </View>
+      </View>
+      <View importantForAccessibility="no-hide-descendants" style={{ gap: 8 }}>
+        <FadeIn index={1}>
+          <PreviewNotification title={t('ob_preview_title')} body={t('ob_remind_preview')} when={t('ob_preview_now')} />
+        </FadeIn>
+        <FadeIn index={2}>
+          <PreviewNotification title={t('ob_preview_title2')} body={t('ob_preview_body2')} when={t('yesterday')} faded />
+        </FadeIn>
+      </View>
+    </View>
+  )
+}
+
+export const RemindersStep = memo(({ layout, onEnable, onSkip, busy }) => {
   const { t } = useLanguage()
   return (
     <StepLayout
@@ -263,24 +311,14 @@ export const RemindersStep = memo(({ layout, onEnable, onSkip, busy }) => {
       primary={{ title: t('ob_remind_on'), onPress: onEnable, loading: busy, icon: 'bell' }}
       secondary={{ title: t('ob_not_now'), onPress: onSkip, disabled: busy }}
     >
-      <View style={{ alignItems: 'center' }}>
-        <View style={[styles.heroOuter, { width: 120, height: 120, borderRadius: 60, backgroundColor: colors.primarySoft }]}>
-          <Icon name="bell" size={52} color={colors.primary} />
-        </View>
-        <AppText variant="title" center style={{ fontSize: 26, lineHeight: 33, marginTop: 20 }}>{t('ob_remind_title')}</AppText>
+      <PhonePreview />
+      <AppText variant="small" faint center style={{ marginTop: 8 }}>{t('ob_preview_note')}</AppText>
+      <View style={{ alignItems: 'center', marginTop: 18 }}>
+        <AppText variant="title" center style={{ fontSize: 26, lineHeight: 33 }}>{t('ob_remind_title')}</AppText>
         <AppText variant="body" muted center style={{ marginTop: 8, fontSize: 16, lineHeight: 23, maxWidth: 360 }}>
           {t('ob_remind_sub')}
         </AppText>
       </View>
-      <FadeIn index={2} style={{ marginTop: 26 }}>
-        <Card style={styles.preview}>
-          <IconBadge name="drop" tone="period" size={38} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <AppText variant="small" faint>My Cycle</AppText>
-            <AppText variant="bodyStrong" style={{ marginTop: 2 }}>{t('ob_remind_preview')}</AppText>
-          </View>
-        </Card>
-      </FadeIn>
     </StepLayout>
   )
 })
@@ -361,7 +399,20 @@ const styles = StyleSheet.create({
     padding: 16, minHeight: 84,
   },
   radio: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  preview: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  phone: {
+    width: '100%', maxWidth: 360, alignSelf: 'center', borderWidth: 1, borderRadius: 28, padding: 12, paddingTop: 10,
+  },
+  statusBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, marginBottom: 10 },
+  statusIcons: { flexDirection: 'row', alignItems: 'flex-end', gap: 2 },
+  signalBar: { width: 3, borderRadius: 1 },
+  battery: { width: 20, height: 10, borderWidth: 1, borderRadius: 3, padding: 1, marginLeft: 5 },
+  batteryFill: { flex: 1, borderRadius: 1 },
+  notif: {
+    borderRadius: 18, paddingHorizontal: 14, paddingVertical: 11,
+    elevation: 2, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
+  },
+  notifHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  notifIcon: { width: 16, height: 16, borderRadius: 4 },
   sumRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   sep: { height: StyleSheet.hairlineWidth },
 })
